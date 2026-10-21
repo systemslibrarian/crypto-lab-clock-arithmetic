@@ -14,7 +14,7 @@ export function act4([a, n]: bigint[]) {
     unit = gcd(a, n) === 1n,
     euler = pow(A, phi, n),
     prime = isPrime(n);
-  let html = `<p>${a} mod ${n} = ${A}; φ(${n}) = ${phi}.</p>${diagram(n, w.walk)}<p id="power-walk">Walk: ${w.walk.join(' → ')}${w.order ? '' : ' → ' + w.repeated + ' (cycle repeats; never reaches 1)'}. ${w.order ? `Order = <span id="order">${w.order}</span>.` : 'No multiplicative order: this base is not a unit.'}</p>`;
+  let html = `<p>${a} mod ${n} = ${A}; φ(${n}) = ${phi}.</p>${diagram(n, w.walk, { id: 'act4', closesAtOne: w.order !== null, repeated: w.repeated })}<p id="power-walk">Walk: ${w.walk.join(' → ')}${w.order ? '' : ' → ' + w.repeated + ' (cycle repeats; never reaches 1)'}. ${w.order ? `Order = <span id="order">${w.order}</span>.` : 'No multiplicative order: this base is not a unit.'}</p>`;
   html += check(
     'routes',
     w.order === other,

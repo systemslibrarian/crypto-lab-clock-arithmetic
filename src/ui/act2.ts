@@ -34,6 +34,8 @@ export function act2([a, n]: bigint[]) {
         );
   return (
     html +
-    '<p>Use this inverse to find d in <a href="https://systemslibrarian.github.io/crypto-lab-rsa-educational/">Educational RSA</a>.</p>'
+    (inv.kind === 'inverse'
+      ? '<p>Use this inverse to find d in <a href="https://systemslibrarian.github.io/crypto-lab-rsa-educational/">Educational RSA</a>.</p>'
+      : '')
   );
 }

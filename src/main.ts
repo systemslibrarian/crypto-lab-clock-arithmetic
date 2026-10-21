@@ -1,4 +1,6 @@
 import './style.css';
+import { predictionAnswer } from './ui/predictions';
+import { compositeCounterexample } from './ui/composite';
 type Exhibit = {
   title: string;
   intro: string;
@@ -142,7 +144,6 @@ const states = specs.map(() => ({
   worker: null as Worker | null,
   epoch: 0,
   signature: '',
-  started: false,
 }));
 let selected = 0;
 // Canonicalize integer inputs so equivalent values do not retire an unchanged computation.
@@ -169,7 +170,6 @@ function activate(index: number) {
     (b as HTMLButtonElement).tabIndex = i === index ? 0 : -1;
   });
   Array.from(acts.children).forEach((s, i) => ((s as HTMLElement).hidden = i !== index));
-  if (!states[index].started) run(index);
 }
 // Invalidate all results computed for a different tuple of integer inputs.
 function retire(index: number) {
@@ -181,7 +181,6 @@ function retire(index: number) {
   state.epoch++;
   state.worker?.terminate();
   state.worker = null;
-  state.started = true;
   document.getElementById(`result-${index + 1}`)!.replaceChildren();
   document.getElementById(`notice-${index + 1}`)!.textContent =
     'Inputs changed: dependent results retired. Compute again.';
@@ -204,6 +203,7 @@ function controlsAfter(index: number) {
     const units = cells.dataset.units!.split(',');
     delete cells.dataset.units;
     let page = 0;
+    // Display a 200-element window without changing the full unit count.
     const render = () => {
       const shown = units.slice(page * 200, (page + 1) * 200);
       cells.innerHTML = shown.map((x) => `<span class="unit residue">${x}</span>`).join('');
@@ -232,7 +232,6 @@ function run(index: number) {
     notice = document.getElementById(`notice-${index + 1}`)!;
   state.worker?.terminate();
   const version = ++state.epoch;
-  state.started = true;
   state.signature = signature(section);
   result.replaceChildren();
   try {
@@ -288,7 +287,8 @@ specs.forEach((spec, index) => {
   section.setAttribute('aria-labelledby', button.id);
   section.tabIndex = 0;
   section.hidden = index !== 0;
-  section.innerHTML = `<h2>${id}. ${spec.title}</h2><p class="intro">${spec.intro}</p><div class="predict"><strong>Predict before computing</strong><p>${spec.predict}</p><details><summary>Reveal what to watch</summary><p>The computed result below is the answer for your current inputs. Try the contrasting example, then check which precondition changed.</p></details></div><div class="controls">${spec.fields.map(([name, label, value, title], i) => `<label${index === 5 && i >= 4 ? ' class="third-input"' : ''}>${label}<input id="a${id}-${name}" type="text" inputmode="numeric" value="${value}" title="${title}" autocomplete="off"></label>`).join('')}${index === 5 ? '<label>Congruences<select id="crt-count"><option value="3">Three</option><option value="2">Two</option></select></label>' : ''}</div><div class="actions"><button id="compute-${id}" class="primary">Compute</button>${spec.examples.map(([name], i) => `<button data-example="${i}">${name}</button>`).join('')}</div><p id="notice-${id}" class="notice" role="status" aria-live="polite"></p><div id="result-${id}" class="result" role="status" aria-live="polite"></div>`;
+  section.innerHTML = `<h2>${id}. ${spec.title}</h2><p class="intro">${spec.intro}</p><div class="predict"><strong>Predict before computing</strong><p>${spec.predict}</p><details><summary>Reveal what to watch</summary><p>${predictionAnswer(id)}</p></details></div><div class="controls">${spec.fields.map(([name, label, value, title], i) => `<label${index === 5 && i >= 4 ? ' class="third-input"' : ''}>${label}<input id="a${id}-${name}" type="text" inputmode="numeric" value="${value}" title="${title}" autocomplete="off"></label>`).join('')}${index === 5 ? '<label>Congruences<select id="crt-count"><option value="3">Three</option><option value="2">Two</option></select></label>' : ''}</div><div class="actions"><button id="compute-${id}" class="primary">Compute</button>${spec.examples.map(([name], i) => `<button data-example="${i}">${name}</button>`).join('')}</div><p id="notice-${id}" class="notice" role="status" aria-live="polite"></p><div id="result-${id}" class="result" role="status" aria-live="polite"></div>`;
+  if (index === 4) section.insertAdjacentHTML('beforeend', compositeCounterexample());
   acts.append(section);
   stateInit();
   // Wire input changes and examples to recomputation of their exact integer tuple.

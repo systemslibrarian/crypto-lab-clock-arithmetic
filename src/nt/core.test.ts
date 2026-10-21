@@ -54,6 +54,7 @@ it('Every unit inverse through n1000 matches brute force and Euler', () => {
     }
   }
 }, 120000);
+// Measured 472 ms locally; exact n ≤ 2000 enumeration retains a 30 s budget for slower CI.
 it('Phi pinned facts and independent counts through n2000', () => {
   for (const [n, v] of [
     [36n, 12n],
@@ -70,7 +71,8 @@ it('Phi pinned facts and independent counts through n2000', () => {
     { p: 2n, e: 12n },
     { p: 5n, e: 12n },
   ]);
-});
+}, 30000);
+// Measured 112 ms locally; all bases through n = 100 retain a 15 s budget.
 it('Power walks, nonunits and orders by independent divisors', () => {
   expect(orderByWalk(3n, 20n).walk).toEqual([3n, 9n, 7n, 1n]);
   expect(orderByWalk(3n, 20n).order).toBe(4n);
@@ -86,7 +88,8 @@ it('Power walks, nonunits and orders by independent divisors', () => {
   expect(pow(2n, 4n, 10n)).toBe(6n);
   for (let n = 2n; n <= 100n; n++)
     for (let a = 0n; a < n; a++) expect(orderByWalk(a, n).order).toBe(orderByDivisors(a, n));
-});
+}, 15000);
+// Measured 722 ms locally with both exhaustive routes; audit measured 3.0–6.5 s before expansion. Allow 30 s on slower CI.
 it('Generators use every prime factor, and all primes below500 agree with order', () => {
   expect(generators(23n)).toEqual([5n, 7n, 10n, 11n, 14n, 15n, 17n, 19n, 20n, 21n]);
   expect(
@@ -94,10 +97,13 @@ it('Generators use every prime factor, and all primes below500 agree with order'
   ).toEqual(new Set([1n, 2n, 11n, 22n]));
   for (let p = 2n; p < 500n; p++)
     if (isPrime(p))
-      for (let g = 1n; g < p; g++)
-        if (isGenerator(g, p).generator !== (orderByWalk(g, p).order === p - 1n))
+      for (let g = 1n; g < p; g++) {
+        const order = orderByWalk(g, p).order;
+        if (isGenerator(g, p).generator !== (order === p - 1n))
           throw Error(`Generator mismatch ${g}/${p}`);
-});
+        if (searchSpace(g, p).size !== order) throw Error(`Search-space/order mismatch ${g}/${p}`);
+      }
+}, 30000);
 it('Subgroups, composite counterexample, search space and guesses are distinct', () => {
   expect(searchSpace(2n, 23n).members.sort((a, b) => (a < b ? -1 : 1))).toEqual([
     1n,

@@ -1,4 +1,4 @@
-import { clock } from './clock';
+import { clock, type WalkTrace } from './clock';
 // Mark exactly the residues occurring in the supplied walk or residue set.
 export function strip(n: bigint, walk: bigint[] = []) {
   const set = new Set(walk);
@@ -8,6 +8,6 @@ export function strip(n: bigint, walk: bigint[] = []) {
   return html + '</div>';
 }
 // Use a discrete clock through n = 24 and an exact residue strip above it.
-export function diagram(n: bigint, walk: bigint[] = []) {
-  return n <= 24n ? clock(n, walk) : strip(n, walk);
+export function diagram(n: bigint, walk: bigint[] = [], trace?: WalkTrace) {
+  return n <= 24n ? clock(n, walk, trace) : strip(n, walk);
 }

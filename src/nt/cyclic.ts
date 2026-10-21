@@ -6,7 +6,7 @@ export function primeGroup(p: bigint): void {
   modulus(p, 10000n);
   if (!isPrime(p))
     throw Error(
-      'Generator search requires a prime p, checked by exact trial division. Use act 4 for composite moduli.',
+      'Generator search requires a prime p, checked by exact trial division. Use act 4 for composite moduli and the ℤ₁₅* counterexample below.',
     );
 }
 // A nonzero g generates exactly when g^((p−1)/q) ≠ 1 for every prime q | p−1.
@@ -23,12 +23,22 @@ export function generators(p: bigint): bigint[] {
   for (let g = 1n; g < p; g++) if (isGenerator(g, p).generator) out.push(g);
   return out;
 }
-// A primitive root raised to (p−1)/d generates the subgroup of order d.
-export function subgroup(d: bigint, p: bigint): { base: bigint; members: bigint[] } {
+// Stop at the first primitive root instead of enumerating every generator.
+export function firstGenerator(p: bigint): bigint {
+  primeGroup(p);
+  for (let g = 1n; g < p; g++) if (isGenerator(g, p).generator) return g;
+  throw Error('Implementation disagreement: no generator for a prime group.');
+}
+// A supplied primitive root is reused; its (p−1)/d power generates the order-d subgroup.
+export function subgroup(
+  d: bigint,
+  p: bigint,
+  root = firstGenerator(p),
+): { base: bigint; members: bigint[] } {
   primeGroup(p);
   if (d < 1n || (p - 1n) % d !== 0n) throw Error('Subgroup order must divide p−1.');
-  const root = generators(p)[0],
-    base = pow(root, (p - 1n) / d, p);
+  if (!isGenerator(root, p).generator) throw Error('Subgroup construction needs a primitive root.');
+  const base = pow(root, (p - 1n) / d, p);
   return { base, members: orderByWalk(base, p).walk };
 }
 // [extension] point: decompose ℤₙ* into a product of cyclic groups.

@@ -3,3 +3,5 @@ dist/
 test-results/
 playwright-report/
 mutation-logs/
+chat.md
+CRYPTO-LAB-TEMPLATE*.md

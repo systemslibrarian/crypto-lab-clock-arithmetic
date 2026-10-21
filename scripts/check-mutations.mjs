@@ -1,5 +1,5 @@
-// Mutations run only on a committed, clean source baseline. Each is built, killed,
-// restored byte-for-byte, rebuilt and tested green before the next begins.
+// Each mutation starts from committed source, builds, fails its named assertion,
+// and restores the exact artifact and a green owning test before the next case.
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -8,6 +8,19 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
 const config = process.env.PLAYWRIGHT_CONFIG;
+const run = ([cmd, args]) =>
+  spawnSync(cmd, args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, CI: '1' },
+  });
+const pass = (command, label) => {
+  const r = run(command);
+  if (r.status !== 0) throw Error(`${label}\n${r.stdout}\n${r.stderr}`);
+  return r;
+};
+const build = ['npm', ['run', 'build']];
 const browser = (title) => [
   'npx',
   [
@@ -16,286 +29,333 @@ const browser = (title) => [
     'e2e/claims.spec.ts',
     '--project=chromium',
     '--grep',
-    title,
+    title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
     '--workers=1',
     '--retries=0',
+    '--reporter=json',
     ...(config ? ['--config', config] : []),
   ],
 ];
-const build = ['npm', ['run', 'build']];
-const run = ([cmd, args]) =>
-  spawnSync(cmd, args, { cwd: root, encoding: 'utf8', env: { ...process.env, CI: '1' } });
-const pass = (cmd, label) => {
-  const r = run(cmd);
-  if (r.status !== 0) throw Error(`${label}\n${r.stdout}\n${r.stderr}`);
-  return r;
-};
 const hash = () => {
   const h = createHash('sha256');
-  const walk = (d) => {
-    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) =>
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
       a.name.localeCompare(b.name),
     )) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) walk(p);
+      const path = join(dir, e.name);
+      if (e.isDirectory()) walk(path);
       else {
-        h.update(p);
-        h.update(readFileSync(p));
+        h.update(path);
+        h.update(readFileSync(path));
       }
     }
   };
   walk('dist');
   return h.digest('hex');
 };
+const patch = (file, anchor, replacement) => ({ file, anchor, replacement });
+const single = (name, file, anchor, replacement, owner) => ({
+  name,
+  patches: [patch(file, anchor, replacement)],
+  owner,
+});
 const cases = [
-  [
+  single(
     'wrong Bezout coefficient',
     'src/nt/euclid.ts',
     's = s0 - q * s1',
     's = s0 + q * s1',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Bézout every',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'Bézout every',
+  ),
+  single(
     'unreduced inverse',
     'src/nt/euclid.ts',
     'value: mod(s, n)',
     'value: s + mod(0n, n)',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Bézout every',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
-    'phi multiplies by p',
-    'src/nt/phi.ts',
-    '* (p - 1n)',
-    '*p',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Phi drawn units',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'Bézout every',
+  ),
+  single('phi multiplies by p', 'src/nt/phi.ts', '* (p - 1n)', '* p', 'Phi drawn units'),
+  single(
     'order asserted as phi',
     'src/nt/order.ts',
     'return { order: k, walk',
     'return { order: phiByFactor(n), walk',
-    ['npx', ['vitest', 'run', 'src/nt/core.test.ts', '-t', 'Subgroups, composite']],
-  ],
-  [
+    'Euler composite',
+  ),
+  single(
     'generator checks only factor2',
     'src/nt/cyclic.ts',
     'factor(p - 1n).map',
     'factor(p - 1n).filter(({ p: q }) => q === 2n).map',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Generators, subgroups',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'Generators, subgroups',
+  ),
+  single(
     'CRT omits compatibility',
     'src/nt/crt.ts',
     'if (delta % g !== 0n)',
     'if (g === 0n)',
-    ['npx', ['vitest', 'run', 'src/nt/core.test.ts', '-t', 'CRT Sunzi']],
-  ],
-  [
+    'incompatible CRT',
+  ),
+  single(
     'CRT product instead of lcm',
     'src/nt/crt.ts',
     'nextMod = (m / g) * n',
     'nextMod = m * n',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'CRT substitutes',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'CRT substitutes',
+  ),
+  single(
     'search space hardcoded2',
     'src/nt/toyDh.ts',
     'size: BigInt(members.length)',
     'size: 2n',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Generators, subgroups',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'Generators, subgroups',
+  ),
+  single(
     'gcd2 falsely invertible',
     'src/nt/euclid.ts',
     'if (g > 1n)',
     'if (g > 2n)',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'No inverse gcd2',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'No inverse gcd2',
+  ),
+  single(
     'Euler uses n minus1',
     'src/ui/act4.ts',
     'euler = pow(A, phi, n)',
     'euler = pow(A, n - 1n, n)',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Euler composite',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
+    'Euler composite',
+  ),
+  single(
     'negative claim deleted',
     'src/ui/act4.ts',
     'Euler’s identity holding for a base says nothing about how long its cycle is',
     'This base has a short cycle',
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Euler negative claim',
-        '--workers=1',
-        '--retries=0',
-      ],
-    ],
-  ],
-  [
-    'fixture Euler verdict broken',
+    'Euler negative claim',
+  ),
+  single(
+    'fixture Euler exponent off by one',
     'src/ui/act4.ts',
-    "check('euler', euler === 1n",
-    "check('euler', euler !== 1n",
-    [
-      'npx',
-      [
-        'playwright',
-        'test',
-        'e2e/claims.spec.ts',
-        '--project=chromium',
-        '--grep',
-        'Euler negative claim',
-        '--workers=1',
-        '--retries=0',
-      ],
+    'euler = pow(A, phi, n)',
+    'euler = pow(A, phi + 1n, n)',
+    'Euler negative claim',
+  ),
+  single(
+    'nonunit row falsely a permutation',
+    'src/ui/act1.ts',
+    'gcd(BigInt(i), n) === 1n',
+    'gcd(BigInt(i), n) <= 2n',
+    'Wrap reductions',
+  ),
+  single(
+    'CRT inverse coefficient not normalized',
+    'src/nt/crt.ts',
+    'mod(egcdTable(M, N).s, N)',
+    'egcdTable(M, N).s',
+    'CRT substitutes',
+  ),
+  {
+    name: 'cancel removes terminate and epoch guards',
+    owner: 'Changing n mid-computation',
+    patches: [
+      patch(
+        'src/main.ts',
+        'state.epoch++;\n  state.worker?.terminate();',
+        'state.epoch++;\n  // Mutant: retired worker continues.',
+      ),
+      patch(
+        'src/main.ts',
+        'if (version !== state.epoch) return;',
+        '// Mutant: stale epoch may publish.',
+      ),
     ],
-  ],
+  },
+  single(
+    'nonunit assigned an order',
+    'src/nt/order.ts',
+    'if (gcd(a, n) !== 1n) return null;',
+    'if (gcd(a, n) !== 1n) return 1n;',
+    'Break the precondition',
+  ),
+  single(
+    'power recurrence adds one',
+    'src/nt/order.ts',
+    'x = (x * a) % n;',
+    'x = (x * a + 1n) % n;',
+    'Break the precondition',
+  ),
+  single(
+    'selected generator checks wrong base',
+    'src/ui/act5.ts',
+    'test = isGenerator(g, p)',
+    'test = isGenerator(mod(g + 1n, p), p)',
+    'Generators, subgroups',
+  ),
+  single(
+    'subgroup exponent off by one',
+    'src/nt/cyclic.ts',
+    'const base = pow(root, (p - 1n) / d, p);',
+    'const base = pow(root, (p - 1n) / d + 1n, p);',
+    'Generators, subgroups',
+  ),
+  single(
+    'guess count starts below zero',
+    'src/nt/toyDh.ts',
+    'let guesses = 0n;',
+    'let guesses = -1n;',
+    'Generators, subgroups',
+  ),
+  single(
+    'DH shared exponent off by one',
+    'src/nt/toyDh.ts',
+    'secret = pow(B, a, p)',
+    'secret = pow(B, a + 1n, p)',
+    'Generators, subgroups',
+  ),
+  single(
+    'divisor route order off by one',
+    'src/nt/order.ts',
+    'if (pow(a, d, n) === 1n) return d;',
+    'if (pow(a, d, n) === 1n) return d + 1n;',
+    'Euler negative claim',
+  ),
+  single(
+    'Fermat exponent off by one',
+    'src/ui/act4.ts',
+    'pow(A, n - 1n, n) === 1n',
+    'pow(A, n, n) === 1n',
+    'Euler negative claim',
+  ),
+  single(
+    'clock drops initial multiplication',
+    'src/ui/clock.ts',
+    '[1n, ...walk]',
+    '[...walk]',
+    'Clock directed edges',
+  ),
+  single(
+    'clock sends nonunit cycle into one',
+    'src/ui/clock.ts',
+    '[...walk, trace.repeated]',
+    '[...walk, 1n]',
+    'Clock directed edges',
+  ),
+  single(
+    'prime group budget enlarged',
+    'src/nt/cyclic.ts',
+    'modulus(p, 10000n);',
+    'modulus(p, 100000n);',
+    'Refuses act5 prime p above',
+  ),
+  single(
+    'text digit budget enlarged',
+    'src/main.ts',
+    'x.value.length > 2000',
+    'x.value.length > 3000',
+    'Refuses input over 2,000 digits',
+  ),
+  single(
+    'CRT dedupe compares wrong residue',
+    'src/nt/crt.ts',
+    'x.n === c.n && x.a === a',
+    'x.n === c.n && x.a === a + 1n',
+    'CRT deduplicates',
+  ),
 ];
-for (const c of cases) if (c[4][1].includes('--grep') && config) c[4][1].push('--config', config);
-const dirty = spawnSync('git', ['diff', '--exit-code', '--', ...new Set(cases.map((x) => x[1]))], {
-  encoding: 'utf8',
-});
-if (dirty.status !== 0) throw Error('Commit the source baseline before mutation checks.');
-pass(build, 'baseline build');
-const baseline = hash();
-const evidence = [];
-mkdirSync('mutation-logs', { recursive: true });
-for (const [name, file, before, after, command] of cases) {
-  pass(command, `${name}: baseline test`);
-  const original = readFileSync(file, 'utf8');
-  if (original.split(before).length !== 2) throw Error(`${name}: expected one mutation site`);
-  let mutant;
+const files = [...new Set(cases.flatMap((c) => c.patches.map((p) => p.file)))];
+if (run(['git', ['diff', 'HEAD', '--exit-code', '--', ...files]]).status !== 0)
+  throw Error('Commit the source baseline before mutation checks.');
+// Validate every anchor before starting; a missing/duplicate site is never evidence of a kill.
+for (const c of cases)
+  for (const p of c.patches)
+    if (readFileSync(p.file, 'utf8').split(p.anchor).length !== 2)
+      throw Error(`${c.name}: expected exactly one anchor in ${p.file}: ${p.anchor}`);
+
+const testResult = (command, slug, phase) => {
+  const r = run(command);
+  writeFileSync(`mutation-logs/${slug}-${phase}.log`, r.stdout + r.stderr);
+  let report;
   try {
-    writeFileSync(file, original.replace(before, after));
-    const diff = spawnSync('git', ['diff', '--', file], { encoding: 'utf8' }).stdout;
-    if (!diff.trim()) throw Error(`${name}: empty diff`);
-    pass(build, `${name}: mutant build`);
-    mutant = hash();
-    if (mutant === baseline) throw Error(`${name}: bundle did not move`);
-    const r = run(command);
-    writeFileSync(`mutation-logs/${name.replaceAll(' ', '-')}.log`, r.stdout + r.stderr);
-    if (r.status === 0 || !/expect\(|AssertionError|Error: expect/.test(r.stdout + r.stderr))
-      throw Error(`${name}: no assertion kill\n${r.stdout}\n${r.stderr}`);
-    evidence.push({
-      name,
+    report = JSON.parse(r.stdout);
+  } catch {
+    throw Error(`${slug} ${phase}: missing Playwright JSON report\n${r.stderr}`);
+  }
+  const specs = [];
+  const visit = (suite) => {
+    specs.push(...(suite.specs ?? []));
+    for (const s of suite.suites ?? []) visit(s);
+  };
+  for (const suite of report.suites ?? []) visit(suite);
+  if (specs.length !== 1 || specs[0].tests.length !== 1 || specs[0].tests[0].results.length !== 1)
+    throw Error(`${slug} ${phase}: expected exactly one named test and zero retries`);
+  const result = specs[0].tests[0].results[0];
+  return { r, report, result, title: specs[0].title };
+};
+const green = (command, slug, phase) => {
+  const data = testResult(command, slug, phase);
+  if (data.r.status !== 0 || data.result.status !== 'passed' || data.report.stats.skipped !== 0)
+    throw Error(
+      `${slug} ${phase}: owning test is not green; see mutation-logs/${slug}-${phase}.log`,
+    );
+  return data;
+};
+mkdirSync('mutation-logs', { recursive: true });
+pass(build, 'baseline build');
+const baseline = hash(),
+  evidence = [];
+for (const c of cases) {
+  const slug = c.name.replaceAll(' ', '-'),
+    command = browser(c.owner);
+  const unmutated = green(command, slug, 'baseline');
+  if (hash() !== baseline) throw Error(`${c.name}: baseline artifact changed`);
+  const originals = new Map(c.patches.map((p) => [p.file, readFileSync(p.file, 'utf8')]));
+  let record;
+  try {
+    for (const p of c.patches) {
+      const current = readFileSync(p.file, 'utf8');
+      if (current.split(p.anchor).length !== 2)
+        throw Error(`${c.name}: anchor changed while applying patches`);
+      writeFileSync(p.file, current.replace(p.anchor, p.replacement));
+    }
+    const diff = pass(['git', ['diff', '--', ...originals.keys()]], 'read mutation diff').stdout;
+    if (!diff.trim()) throw Error(`${c.name}: empty diff`);
+    pass(build, `${c.name}: mutant must compile`);
+    const mutant = hash();
+    if (mutant === baseline) throw Error(`${c.name}: bundle hash did not move`);
+    const red = testResult(command, slug, 'mutant');
+    const failures = (red.result.errors ?? []).map((e) => e.message ?? '').join('\n');
+    if (
+      red.r.status === 0 ||
+      red.result.status !== 'failed' ||
+      !/expect\(|AssertionError|Error: expect/.test(failures)
+    )
+      throw Error(`${c.name}: no assertion kill; infrastructure errors and timeouts do not count`);
+    if (hash() !== mutant) throw Error(`${c.name}: browser did not retain the mutant build`);
+    record = {
+      name: c.name,
+      patches: c.patches,
+      namedTest: unmutated.title,
+      baselineGreen: true,
+      nonEmptyDiff: true,
       sourceDiff: diff,
       baseline,
       mutant,
-      namedTest: command[1].includes('--grep')
-        ? command[1][command[1].indexOf('--grep') + 1]
-        : command[1].at(-1),
-      assertionFailure: true,
+      bundleHashMoved: true,
+      namedTestRed: true,
+      assertionFailure: failures,
       retries: 0,
-    });
+      skips: red.report.stats.skipped,
+    };
   } finally {
-    writeFileSync(file, original);
-    pass(build, `${name}: restore build`);
-    if (hash() !== baseline) throw Error(`${name}: restored hash differs`);
-    pass(command, `${name}: restored test`);
+    for (const [file, original] of originals) writeFileSync(file, original);
+    pass(build, `${c.name}: restore build`);
+    if (hash() !== baseline) throw Error(`${c.name}: restored hash differs`);
+    green(command, slug, 'restored');
   }
-  evidence.at(-1).restoredGreen = true;
-  console.log(`${name}: killed; exact artifact restored; owning test green`);
+  record.restoredGreen = true;
+  record.restoredHash = hash();
+  evidence.push(record);
+  writeFileSync('mutation-evidence.json', JSON.stringify(evidence, null, 2) + '\n');
+  console.log(
+    `${c.name}: baseline green; non-empty diff; bundle hash moved; ${record.namedTest} red; restored green`,
+  );
 }
-writeFileSync('mutation-evidence.json', JSON.stringify(evidence, null, 2) + '\n');
+console.log(`${evidence.length} of ${cases.length} killed; zero retries and skips.`);

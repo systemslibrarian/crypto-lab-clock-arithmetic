@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   build:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -26,13 +27,10 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npm test --if-present
+      - run: npm test
       - run: npm run build
       - name: Install Playwright browser
-        # Three engines because the regression tests below assert what a browser's own
-        # WebCrypto and layout do, and "works in every engine" is a claim this repo
-        # publishes to instructors. One apt step, not three.
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: E2E + accessibility gate (WCAG A/AA, axe-core)
         run: npm run test:e2e
       - uses: actions/upload-pages-artifact@v5
@@ -52,9 +50,6 @@ jobs:
 
   # Dependabot only. Runs after the gate above, so a bump can only merge itself
   # if this lab's own tests, build and axe/e2e run went green on the PR.
-  # Majors are deliberately excluded -- the 2026-08-18 batch had to hold back 109
-  # bumps and they were overwhelmingly majors (@noble v2 dropped export subpaths,
-  # TypeScript 7, vitest 4), so those still want a human.
   dependabot-auto-merge:
     needs: build
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
