@@ -1,1 +1,18 @@
-export function clock(n:bigint,walk:bigint[]=[]){const N=Number(n),points=Array.from({length:N},(_,i)=>{const a=i*2*Math.PI/N-Math.PI/2;return {x:150+116*Math.cos(a),y:150+116*Math.sin(a)};});return `<svg class="clock" viewBox="0 0 300 300" role="img" aria-label="Clock of ${n} residues${walk.length?', with the power walk':''}">${walk.slice(1).map((r,i)=>{const a=points[Number(walk[i])],b=points[Number(r)];return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--accent)" stroke-width="2"/>`;}).join('')}${points.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="13" fill="${walk.includes(BigInt(i))?'#244d36':'#172820'}" stroke="#8ba99a"/><text x="${p.x}" y="${p.y+4}" text-anchor="middle" fill="#edf6ef" font-size="12">${i}</text>`).join('')}</svg>`;}
+// Place each residue at angle 2πr/n and connect consecutive displayed powers.
+export function clock(n: bigint, walk: bigint[] = []) {
+  const N = Number(n),
+    points = Array.from({ length: N }, (_, i) => {
+      const a = (i * 2 * Math.PI) / N - Math.PI / 2;
+      return { x: 150 + 116 * Math.cos(a), y: 150 + 116 * Math.sin(a) };
+    });
+  return `<svg class="clock" viewBox="0 0 300 300" role="img" aria-label="Clock of ${n} residues${walk.length ? ', with the power walk' : ''}">${walk
+    .slice(1)
+    .map((r, i) => {
+      const a = points[Number(walk[i])],
+        b = points[Number(r)];
+      return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--accent)" stroke-width="2"/>`;
+    })
+    .join(
+      '',
+    )}${points.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="13" fill="${walk.includes(BigInt(i)) ? '#244d36' : '#172820'}" stroke="#8ba99a"/><text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="#edf6ef" font-size="12">${i}</text>`).join('')}</svg>`;
+}

@@ -1,2 +1,82 @@
-import {crt} from '../nt/crt';import {mod} from '../nt/mod';import {table,check,verdict} from './common';
-export function act6(v:bigint[]){const inputs=[];for(let i=0;i<v.length;i+=2)inputs.push({a:v[i],n:v[i+1]});const r=crt(inputs);let html=table('Input congruences',['Residue a','Modulus n'],inputs.map(c=>[String(c.a),String(c.n)]),'crt-inputs');if(r.kind==='NoSolution')html+=verdict('info',r.reason+(r.g===2n?' This is a parity clash.':''),'crt-verdict');else{html+=verdict('ok',`x = <span id="crt-x">${r.x}</span> (mod <span id="crt-modulus">${r.modulus}</span>). Combined modulus is the lcm.`,'crt-verdict');if(r.deduplicated)html+=verdict('info',`${r.deduplicated} repeated congruence(s) deduplicated.`);html+=table('Constructive CRT merges',['Current x (mod m)','Next a (mod n)','gcd','Difference','Inverse and check','Multiplier k','Combined'],r.rows.map(x=>[`${x.x} (mod ${x.m})`,`${x.a} (mod ${x.n})`,String(x.g),String(x.delta),x.inverseMod===1n?'Reduced modulus 1: no inverse is needed.':check('crt-inverse',x.inverse>=0n&&x.inverse<x.inverseMod&&mod(x.inverseBase*x.inverse,x.inverseMod)===1n,`${x.inverseBase}⁻¹ mod ${x.inverseMod} = ${x.inverse}; ${x.inverseBase} · ${x.inverse} mod ${x.inverseMod} = ${mod(x.inverseBase*x.inverse,x.inverseMod)}`),String(x.k),`${x.next} (mod ${x.nextMod})`]));html+=r.inputs.map(c=>check('crt-substitution',mod(r.x,c.n)===mod(c.a,c.n),`${r.x} mod ${c.n} = ${mod(r.x,c.n)}`)).join('');}const grid:string[][]=[];for(let a=0n;a<3n;a++){const row=[String(a)];for(let b=0n;b<5n;b++){let x=0n;while(x%3n!==a||x%5n!==b)x++;row.push(String(x));}grid.push(row);}return html+`<h3>ℤ₁₅ ↔ ℤ₃ × ℤ₅</h3>${table('CRT bijection, rows modulo 3 and columns modulo 5',['mod 3 / mod 5','0','1','2','3','4'],grid)}<p>Each residue 0…14 occurs exactly once. The construction reuses <button class="jump-act2">act 2’s inverse</button>. <a href="https://systemslibrarian.github.io/crypto-lab-rsa-forge/">RSA Forge</a> applies CRT to Håstad’s broadcast attack and demonstrates a software-simulated CRT fault.</p>`;}
+import { crt } from '../nt/crt';
+import { mod } from '../nt/mod';
+import { table, check, verdict } from './common';
+// Render compatible CRT merges, checked inverses and the ℤ₁₅ residue bijection.
+export function act6(v: bigint[]) {
+  const inputs = [];
+  for (let i = 0; i < v.length; i += 2) inputs.push({ a: v[i], n: v[i + 1] });
+  const r = crt(inputs);
+  let html = table(
+    'Input congruences',
+    ['Residue a', 'Modulus n'],
+    inputs.map((c) => [String(c.a), String(c.n)]),
+    'crt-inputs',
+  );
+  if (r.kind === 'NoSolution')
+    html += verdict(
+      'info',
+      r.reason + (r.g === 2n ? ' This is a parity clash.' : ''),
+      'crt-verdict',
+    );
+  else {
+    html += verdict(
+      'ok',
+      `x = <span id="crt-x">${r.x}</span> (mod <span id="crt-modulus">${r.modulus}</span>). Combined modulus is the lcm.`,
+      'crt-verdict',
+    );
+    if (r.deduplicated)
+      html += verdict('info', `${r.deduplicated} repeated congruence(s) deduplicated.`);
+    html += table(
+      'Constructive CRT merges',
+      [
+        'Current x (mod m)',
+        'Next a (mod n)',
+        'gcd',
+        'Difference',
+        'Inverse and check',
+        'Multiplier k',
+        'Combined',
+      ],
+      r.rows.map((x) => [
+        `${x.x} (mod ${x.m})`,
+        `${x.a} (mod ${x.n})`,
+        String(x.g),
+        String(x.delta),
+        x.inverseMod === 1n
+          ? 'Reduced modulus 1: no inverse is needed.'
+          : check(
+              'crt-inverse',
+              x.inverse >= 0n &&
+                x.inverse < x.inverseMod &&
+                mod(x.inverseBase * x.inverse, x.inverseMod) === 1n,
+              `${x.inverseBase}⁻¹ mod ${x.inverseMod} = ${x.inverse}; ${x.inverseBase} · ${x.inverse} mod ${x.inverseMod} = ${mod(x.inverseBase * x.inverse, x.inverseMod)}`,
+            ),
+        String(x.k),
+        `${x.next} (mod ${x.nextMod})`,
+      ]),
+    );
+    html += r.inputs
+      .map((c) =>
+        check(
+          'crt-substitution',
+          mod(r.x, c.n) === mod(c.a, c.n),
+          `${r.x} mod ${c.n} = ${mod(r.x, c.n)}`,
+        ),
+      )
+      .join('');
+  }
+  const grid: string[][] = [];
+  for (let a = 0n; a < 3n; a++) {
+    const row = [String(a)];
+    for (let b = 0n; b < 5n; b++) {
+      let x = 0n;
+      while (x % 3n !== a || x % 5n !== b) x++;
+      row.push(String(x));
+    }
+    grid.push(row);
+  }
+  return (
+    html +
+    `<h3>ℤ₁₅ ↔ ℤ₃ × ℤ₅</h3>${table('CRT bijection, rows modulo 3 and columns modulo 5', ['mod 3 / mod 5', '0', '1', '2', '3', '4'], grid)}<p>Each residue 0…14 occurs exactly once. The construction reuses <button class="jump-act2">act 2’s inverse</button>. <a href="https://systemslibrarian.github.io/crypto-lab-rsa-forge/">RSA Forge</a> applies CRT to Håstad’s broadcast attack and demonstrates a software-simulated CRT fault.</p>`
+  );
+}

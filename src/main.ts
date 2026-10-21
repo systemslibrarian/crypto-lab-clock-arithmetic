@@ -1,18 +1,336 @@
 import './style.css';
-type Exhibit={title:string;intro:string;predict:string;fields:[string,string,string,string][];examples:[string,string[]][]};
-const specs:Exhibit[]=[
-{title:'Wrap around',intro:'A remainder names a position after full turns have been removed. Addition moves along the clock; multiplication repeats a step. Unlike ordinary integers, nonzero residues can multiply to zero.',predict:'Is 6 · 5 mod 10 zero? Can two nonzero numbers multiply to zero here?',fields:[['a','First integer','-3','Negative inputs reduce to the same position after wrapping.'],['b','Second integer','47','Large inputs are reduced exactly, not rounded.'],['n','Modulus n','10','Use 2…10,000. Full operation tables appear through 13; above 24 a residue strip replaces the clock.']],examples:[['Use the example',['-3','47','10']],['Zero divisors',['6','5','10']]]},
-{title:'Undo multiplication',intro:'A multiplier can be undone exactly when it shares no factor with the modulus. Euclid finds the common divisor; extended Euclid records how to build it from the two inputs. When that divisor is one, its coefficient becomes the inverse.',predict:'Does 6 have an inverse mod 15?',fields:[['a','Integer a','7','Zero has no inverse; a negative or oversized value is allowed.'],['n','Modulus n','40','Use n ≥ 2, through 10¹². The inverse is always printed in [0,n).']],examples:[['Use the inverse example',['7','40']],['Euclid 391, 299',['391','299']],['No inverse: shared factor 3',['6','15']],['No inverse: shared factor 2',['4','10']]]},
-{title:'Count the units',intro:'The units are residues whose multiplication can be undone. Euler’s φ counts them. Count directly, then use the prime factorisation to compute the same number by a different route.',predict:'How many of 1…36 share no factor with 36?',fields:[['n','Modulus n','36','Exact trial division through 10¹²; direct counting through 10⁶. Larger inputs are refused, never clamped.']],examples:[['Use 36',['36']],['Prime 97',['97']],['Use 100',['100']]]},
-{title:'Watch powers cycle',intro:'Keep multiplying by the same residue. For a unit, the first return to one defines its order, which divides φ(n). Euler’s theorem says a complete φ(n) steps returns to one; it does not say the cycle is that long.',predict:'Will 2’s walk mod 10 ever reach 1?',fields:[['a','Base a','3','Nonunits enter a cycle that never reaches one.'],['n','Modulus n','20','Exact walk through n = 10,000. Above 24, use a residue strip.']],examples:[['Use the example',['3','20']],['Residue strip',['7','100']],['Break the precondition',['2','10']],['Euler passes, tiny cycle',['22','23']]]},
-{title:'Generators and subgroups',intro:'A generator reaches every element of a group. Other bases generate smaller subgroups, and a large prime-order subgroup is useful for real Diffie–Hellman. A base of order two is different: it leaves only two possible shared secrets.',predict:'How many possible shared secrets does base 22 allow modulo 23?',fields:[['p','Prime p','23','Exact trial division checks primality; p ≤ 10,000. A composite is refused.'],['g','Base g','22','A proper subgroup is not automatically weak: base 2 modulo 23 has prime order 11.'],['a','Alice exponent','6','Positive teaching exponent. These values are public in this lab.'],['b','Bob exponent','9','Positive teaching exponent. Guess count may be smaller than search space.']],examples:[['Use order-2 example',['23','22','6','9']],['Prime-order subgroup',['23','2','6','9']],['Whole-group generator',['23','5','6','9']]]},
-{title:'Recombine remainders',intro:'Each congruence describes the same unknown number on a different clock. Coprime clocks combine uniquely modulo their product. Shared factors require compatible remainders, and the combined modulus is then their least common multiple.',predict:'Is there a number that is 1 mod 4 and 2 mod 6?',fields:[['a1','First residue','2','Negative residues are reduced before combining.'],['n1','First modulus','3','Moduli must be ≥ 2.'],['a2','Second residue','3','Repeated identical congruences are deduplicated.'],['n2','Second modulus','5','A repeated modulus with a different residue has no solution.'],['a3','Third residue','2','Used only when three congruences are selected.'],['n3','Third modulus','7','Combined modulus is the lcm, not always the product.']],examples:[['Sunzi’s problem',['2','3','3','5','2','7']],['Incompatible parity',['1','4','2','6']],['Compatible shared factor',['1','4','3','6']]]}
+type Exhibit = {
+  title: string;
+  intro: string;
+  predict: string;
+  fields: [string, string, string, string][];
+  examples: [string, string[]][];
+};
+const specs: Exhibit[] = [
+  {
+    title: 'Wrap around',
+    intro:
+      'A remainder names a position after full turns have been removed. Addition moves along the clock; multiplication repeats a step. Unlike ordinary integers, nonzero residues can multiply to zero.',
+    predict: 'Is 6 · 5 mod 10 zero? Can two nonzero numbers multiply to zero here?',
+    fields: [
+      ['a', 'First integer', '-3', 'Negative inputs reduce to the same position after wrapping.'],
+      ['b', 'Second integer', '47', 'Large inputs are reduced exactly, not rounded.'],
+      [
+        'n',
+        'Modulus n',
+        '10',
+        'Use 2…10,000. Full operation tables appear through 13; above 24 a residue strip replaces the clock.',
+      ],
+    ],
+    examples: [
+      ['Use the example', ['-3', '47', '10']],
+      ['Zero divisors', ['6', '5', '10']],
+    ],
+  },
+  {
+    title: 'Undo multiplication',
+    intro:
+      'A multiplier can be undone exactly when it shares no factor with the modulus. Euclid finds the common divisor; extended Euclid records how to build it from the two inputs. When that divisor is one, its coefficient becomes the inverse.',
+    predict: 'Does 6 have an inverse mod 15?',
+    fields: [
+      ['a', 'Integer a', '7', 'Zero has no inverse; a negative or oversized value is allowed.'],
+      ['n', 'Modulus n', '40', 'Use n ≥ 2, through 10¹². The inverse is always printed in [0,n).'],
+    ],
+    examples: [
+      ['Use the inverse example', ['7', '40']],
+      ['Euclid 391, 299', ['391', '299']],
+      ['No inverse: shared factor 3', ['6', '15']],
+      ['No inverse: shared factor 2', ['4', '10']],
+    ],
+  },
+  {
+    title: 'Count the units',
+    intro:
+      'The units are residues whose multiplication can be undone. Euler’s φ counts them. Count directly, then use the prime factorisation to compute the same number by a different route.',
+    predict: 'How many of 1…36 share no factor with 36?',
+    fields: [
+      [
+        'n',
+        'Modulus n',
+        '36',
+        'Exact trial division through 10¹²; direct counting through 10⁶. Larger inputs are refused, never clamped.',
+      ],
+    ],
+    examples: [
+      ['Use 36', ['36']],
+      ['Prime 97', ['97']],
+      ['Use 100', ['100']],
+    ],
+  },
+  {
+    title: 'Watch powers cycle',
+    intro:
+      'Keep multiplying by the same residue. For a unit, the first return to one defines its order, which divides φ(n). Euler’s theorem says a complete φ(n) steps returns to one; it does not say the cycle is that long.',
+    predict: 'Will 2’s walk mod 10 ever reach 1?',
+    fields: [
+      ['a', 'Base a', '3', 'Nonunits enter a cycle that never reaches one.'],
+      ['n', 'Modulus n', '20', 'Exact walk through n = 10,000. Above 24, use a residue strip.'],
+    ],
+    examples: [
+      ['Use the example', ['3', '20']],
+      ['Residue strip', ['7', '100']],
+      ['Break the precondition', ['2', '10']],
+      ['Euler passes, tiny cycle', ['22', '23']],
+    ],
+  },
+  {
+    title: 'Generators and subgroups',
+    intro:
+      'A generator reaches every element of a group. Other bases generate smaller subgroups, and a large prime-order subgroup is useful for real Diffie–Hellman. A base of order two is different: it leaves only two possible shared secrets.',
+    predict: 'How many possible shared secrets does base 22 allow modulo 23?',
+    fields: [
+      [
+        'p',
+        'Prime p',
+        '23',
+        'Exact trial division checks primality; p ≤ 10,000. A composite is refused.',
+      ],
+      [
+        'g',
+        'Base g',
+        '22',
+        'A proper subgroup is not automatically weak: base 2 modulo 23 has prime order 11.',
+      ],
+      [
+        'a',
+        'Alice exponent',
+        '6',
+        'Positive teaching exponent. These values are public in this lab.',
+      ],
+      [
+        'b',
+        'Bob exponent',
+        '9',
+        'Positive teaching exponent. Guess count may be smaller than search space.',
+      ],
+    ],
+    examples: [
+      ['Use order-2 example', ['23', '22', '6', '9']],
+      ['Prime-order subgroup', ['23', '2', '6', '9']],
+      ['Whole-group generator', ['23', '5', '6', '9']],
+    ],
+  },
+  {
+    title: 'Recombine remainders',
+    intro:
+      'Each congruence describes the same unknown number on a different clock. Coprime clocks combine uniquely modulo their product. Shared factors require compatible remainders, and the combined modulus is then their least common multiple.',
+    predict: 'Is there a number that is 1 mod 4 and 2 mod 6?',
+    fields: [
+      ['a1', 'First residue', '2', 'Negative residues are reduced before combining.'],
+      ['n1', 'First modulus', '3', 'Moduli must be ≥ 2.'],
+      ['a2', 'Second residue', '3', 'Repeated identical congruences are deduplicated.'],
+      ['n2', 'Second modulus', '5', 'A repeated modulus with a different residue has no solution.'],
+      ['a3', 'Third residue', '2', 'Used only when three congruences are selected.'],
+      ['n3', 'Third modulus', '7', 'Combined modulus is the lcm, not always the product.'],
+    ],
+    examples: [
+      ['Sunzi’s problem', ['2', '3', '3', '5', '2', '7']],
+      ['Incompatible parity', ['1', '4', '2', '6']],
+      ['Compatible shared factor', ['1', '4', '3', '6']],
+    ],
+  },
 ];
-const acts=document.getElementById('acts')!,steps=document.getElementById('steps')!;steps.setAttribute('role','tablist');const states=specs.map(()=>({worker:null as Worker|null,epoch:0,signature:'',started:false}));let selected=0;
-function signature(section:HTMLElement){return Array.from(section.querySelectorAll<HTMLInputElement>('input')).map(x=>{try{return BigInt(x.value).toString();}catch{return x.value;}}).join('|')+'|'+(section.querySelector<HTMLSelectElement>('select')?.value??'');}
-function activate(index:number){selected=index;Array.from(steps.children).forEach((b,i)=>{b.setAttribute('aria-selected',String(i===index));(b as HTMLButtonElement).tabIndex=i===index?0:-1;});Array.from(acts.children).forEach((s,i)=>(s as HTMLElement).hidden=i!==index);if(!states[index].started)run(index);}
-function retire(index:number){const state=states[index],section=acts.children[index] as HTMLElement,next=signature(section);if(next===state.signature)return;state.signature=next;state.epoch++;state.worker?.terminate();state.worker=null;state.started=true;document.getElementById(`result-${index+1}`)!.replaceChildren();document.getElementById(`notice-${index+1}`)!.textContent='Inputs changed: dependent results retired. Compute again.';}
-function controlsAfter(index:number){const region=document.getElementById(`result-${index+1}`)!;const step=region.querySelector<HTMLButtonElement>('.step-euclid');if(step)step.onclick=()=>{const row=region.querySelector<HTMLElement>('[data-step][hidden]');if(row)row.hidden=false;if(!region.querySelector('[data-step][hidden]'))step.disabled=true;};region.querySelector<HTMLButtonElement>('.jump-act2')?.addEventListener('click',()=>activate(1));const cells=region.querySelector<HTMLElement>('#unit-cells');if(cells){const units=cells.dataset.units!.split(',');delete cells.dataset.units;let page=0;const render=()=>{const shown=units.slice(page*200,(page+1)*200);cells.innerHTML=shown.map(x=>`<span class="unit residue">${x}</span>`).join('');region.querySelector('#unit-window')!.textContent=`Showing ${page*200+1}–${Math.min((page+1)*200,units.length)} of ${units.length} units.`;(region.querySelector('#units-prev') as HTMLButtonElement).disabled=page===0;(region.querySelector('#units-next') as HTMLButtonElement).disabled=(page+1)*200>=units.length;};region.querySelector('#units-prev')!.addEventListener('click',()=>{page--;render();});region.querySelector('#units-next')!.addEventListener('click',()=>{page++;render();});render();}}
-function run(index:number){const state=states[index],section=acts.children[index] as HTMLElement,result=document.getElementById(`result-${index+1}`)!,notice=document.getElementById(`notice-${index+1}`)!;state.worker?.terminate();const version=++state.epoch;state.started=true;state.signature=signature(section);result.replaceChildren();try{let fields=Array.from(section.querySelectorAll<HTMLInputElement>('input'));if(index===5&&section.querySelector<HTMLSelectElement>('select')!.value==='2')fields=fields.slice(0,4);const values=fields.map(x=>{if(!/^-?\d+$/.test(x.value))throw Error('Enter a whole integer using digits, with an optional leading minus sign.');if(x.value.length>2000)throw Error('Input exceeds the 2,000-digit text budget.');return BigInt(x.value);});notice.textContent='Computing exact arithmetic…';const worker=new Worker(new URL('./worker.ts',import.meta.url),{type:'module'});state.worker=worker;worker.onmessage=e=>{if(version!==state.epoch)return;if(e.data.ok){result.innerHTML=e.data.html;notice.textContent=`Computed for the current inputs. Worker arithmetic and rendering: ${e.data.ms.toFixed(1)} ms.`;controlsAfter(index);}else{result.className='result';notice.textContent=e.data.error;}worker.terminate();state.worker=null;};worker.onerror=()=>{if(version===state.epoch)notice.textContent='Computation failed; no result is asserted.';worker.terminate();state.worker=null;};worker.postMessage({act:index+1,values});}catch(e){notice.textContent=(e as Error).message;}}
-specs.forEach((spec,index)=>{const id=index+1,button=document.createElement('button');button.id=`tab-${id}`;button.className='step';button.setAttribute('role','tab');button.setAttribute('aria-controls',`act-${id}`);button.textContent=`${id}. ${spec.title}`;button.onclick=()=>activate(index);steps.append(button);const section=document.createElement('section');section.id=`act-${id}`;section.setAttribute('role','tabpanel');section.setAttribute('aria-labelledby',button.id);section.tabIndex=0;section.hidden=index!==0;section.innerHTML=`<h2>${id}. ${spec.title}</h2><p class="intro">${spec.intro}</p><div class="predict"><strong>Predict before computing</strong><p>${spec.predict}</p><details><summary>Reveal what to watch</summary><p>The computed result below is the answer for your current inputs. Try the contrasting example, then check which precondition changed.</p></details></div><div class="controls">${spec.fields.map(([name,label,value,title],i)=>`<label${index===5&&i>=4?' class="third-input"':''}>${label}<input id="a${id}-${name}" type="text" inputmode="numeric" value="${value}" title="${title}" autocomplete="off"></label>`).join('')}${index===5?'<label>Congruences<select id="crt-count"><option value="3">Three</option><option value="2">Two</option></select></label>':''}</div><div class="actions"><button id="compute-${id}" class="primary">Compute</button>${spec.examples.map(([name],i)=>`<button data-example="${i}">${name}</button>`).join('')}</div><p id="notice-${id}" class="notice" role="status" aria-live="polite"></p><div id="result-${id}" class="result" role="status" aria-live="polite"></div>`;acts.append(section);stateInit();function stateInit(){states[index].signature=signature(section);section.querySelectorAll('input').forEach(x=>x.addEventListener('input',()=>retire(index)));section.querySelector('select')?.addEventListener('change',()=>{section.querySelectorAll<HTMLElement>('.third-input').forEach(x=>x.hidden=section.querySelector<HTMLSelectElement>('select')!.value==='2');retire(index);});section.querySelector(`#compute-${id}`)!.addEventListener('click',()=>run(index));section.querySelectorAll<HTMLButtonElement>('[data-example]').forEach(b=>b.onclick=()=>{const values=spec.examples[Number(b.dataset.example)][1];section.querySelectorAll<HTMLInputElement>('input').forEach((x,i)=>{if(values[i]!==undefined)x.value=values[i];});if(index===5){section.querySelector<HTMLSelectElement>('select')!.value=String(values.length/2);section.querySelectorAll<HTMLElement>('.third-input').forEach(x=>x.hidden=values.length===4);}retire(index);run(index);});}});
-steps.addEventListener('keydown',e=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;e.preventDefault();activate(e.key==='Home'?0:e.key==='End'?5:(selected+(e.key==='ArrowRight'?1:5))%6);(steps.children[selected] as HTMLElement).focus();});activate(0);
+const acts = document.getElementById('acts')!,
+  steps = document.getElementById('steps')!;
+steps.setAttribute('role', 'tablist');
+const states = specs.map(() => ({
+  worker: null as Worker | null,
+  epoch: 0,
+  signature: '',
+  started: false,
+}));
+let selected = 0;
+// Canonicalize integer inputs so equivalent values do not retire an unchanged computation.
+function signature(section: HTMLElement) {
+  return (
+    Array.from(section.querySelectorAll<HTMLInputElement>('input'))
+      .map((x) => {
+        try {
+          return BigInt(x.value).toString();
+        } catch {
+          return x.value;
+        }
+      })
+      .join('|') +
+    '|' +
+    (section.querySelector<HTMLSelectElement>('select')?.value ?? '')
+  );
+}
+// Select the arithmetic exhibit and keep its tab and panel state synchronized.
+function activate(index: number) {
+  selected = index;
+  Array.from(steps.children).forEach((b, i) => {
+    b.setAttribute('aria-selected', String(i === index));
+    (b as HTMLButtonElement).tabIndex = i === index ? 0 : -1;
+  });
+  Array.from(acts.children).forEach((s, i) => ((s as HTMLElement).hidden = i !== index));
+  if (!states[index].started) run(index);
+}
+// Invalidate all results computed for a different tuple of integer inputs.
+function retire(index: number) {
+  const state = states[index],
+    section = acts.children[index] as HTMLElement,
+    next = signature(section);
+  if (next === state.signature) return;
+  state.signature = next;
+  state.epoch++;
+  state.worker?.terminate();
+  state.worker = null;
+  state.started = true;
+  document.getElementById(`result-${index + 1}`)!.replaceChildren();
+  document.getElementById(`notice-${index + 1}`)!.textContent =
+    'Inputs changed: dependent results retired. Compute again.';
+}
+// Step Euclidean divisions and paginate the complete computed unit set.
+function controlsAfter(index: number) {
+  const region = document.getElementById(`result-${index + 1}`)!;
+  const step = region.querySelector<HTMLButtonElement>('.step-euclid');
+  if (step)
+    step.onclick = () => {
+      const row = region.querySelector<HTMLElement>('[data-step][hidden]');
+      if (row) row.hidden = false;
+      if (!region.querySelector('[data-step][hidden]')) step.disabled = true;
+    };
+  region
+    .querySelector<HTMLButtonElement>('.jump-act2')
+    ?.addEventListener('click', () => activate(1));
+  const cells = region.querySelector<HTMLElement>('#unit-cells');
+  if (cells) {
+    const units = cells.dataset.units!.split(',');
+    delete cells.dataset.units;
+    let page = 0;
+    const render = () => {
+      const shown = units.slice(page * 200, (page + 1) * 200);
+      cells.innerHTML = shown.map((x) => `<span class="unit residue">${x}</span>`).join('');
+      region.querySelector('#unit-window')!.textContent =
+        `Showing ${page * 200 + 1}–${Math.min((page + 1) * 200, units.length)} of ${units.length} units.`;
+      (region.querySelector('#units-prev') as HTMLButtonElement).disabled = page === 0;
+      (region.querySelector('#units-next') as HTMLButtonElement).disabled =
+        (page + 1) * 200 >= units.length;
+    };
+    region.querySelector('#units-prev')!.addEventListener('click', () => {
+      page--;
+      render();
+    });
+    region.querySelector('#units-next')!.addEventListener('click', () => {
+      page++;
+      render();
+    });
+    render();
+  }
+}
+// Compute only the current integer tuple; reject results from any retired epoch.
+function run(index: number) {
+  const state = states[index],
+    section = acts.children[index] as HTMLElement,
+    result = document.getElementById(`result-${index + 1}`)!,
+    notice = document.getElementById(`notice-${index + 1}`)!;
+  state.worker?.terminate();
+  const version = ++state.epoch;
+  state.started = true;
+  state.signature = signature(section);
+  result.replaceChildren();
+  try {
+    let fields = Array.from(section.querySelectorAll<HTMLInputElement>('input'));
+    if (index === 5 && section.querySelector<HTMLSelectElement>('select')!.value === '2')
+      fields = fields.slice(0, 4);
+    const values = fields.map((x) => {
+      if (!/^-?\d+$/.test(x.value))
+        throw Error('Enter a whole integer using digits, with an optional leading minus sign.');
+      if (x.value.length > 2000) throw Error('Input exceeds the 2,000-digit text budget.');
+      return BigInt(x.value);
+    });
+    notice.textContent = 'Computing exact arithmetic…';
+    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    state.worker = worker;
+    worker.onmessage = (e) => {
+      if (version !== state.epoch) return;
+      if (e.data.ok) {
+        result.innerHTML = e.data.html;
+        notice.textContent = `Computed for the current inputs. Worker arithmetic and rendering: ${e.data.ms.toFixed(1)} ms.`;
+        controlsAfter(index);
+      } else {
+        result.className = 'result';
+        notice.textContent = e.data.error;
+      }
+      worker.terminate();
+      state.worker = null;
+    };
+    worker.onerror = () => {
+      if (version === state.epoch)
+        notice.textContent = 'Computation failed; no result is asserted.';
+      worker.terminate();
+      state.worker = null;
+    };
+    worker.postMessage({ act: index + 1, values });
+  } catch (e) {
+    notice.textContent = (e as Error).message;
+  }
+}
+specs.forEach((spec, index) => {
+  const id = index + 1,
+    button = document.createElement('button');
+  button.id = `tab-${id}`;
+  button.className = 'step';
+  button.setAttribute('role', 'tab');
+  button.setAttribute('aria-controls', `act-${id}`);
+  button.textContent = `${id}. ${spec.title}`;
+  button.onclick = () => activate(index);
+  steps.append(button);
+  const section = document.createElement('section');
+  section.id = `act-${id}`;
+  section.setAttribute('role', 'tabpanel');
+  section.setAttribute('aria-labelledby', button.id);
+  section.tabIndex = 0;
+  section.hidden = index !== 0;
+  section.innerHTML = `<h2>${id}. ${spec.title}</h2><p class="intro">${spec.intro}</p><div class="predict"><strong>Predict before computing</strong><p>${spec.predict}</p><details><summary>Reveal what to watch</summary><p>The computed result below is the answer for your current inputs. Try the contrasting example, then check which precondition changed.</p></details></div><div class="controls">${spec.fields.map(([name, label, value, title], i) => `<label${index === 5 && i >= 4 ? ' class="third-input"' : ''}>${label}<input id="a${id}-${name}" type="text" inputmode="numeric" value="${value}" title="${title}" autocomplete="off"></label>`).join('')}${index === 5 ? '<label>Congruences<select id="crt-count"><option value="3">Three</option><option value="2">Two</option></select></label>' : ''}</div><div class="actions"><button id="compute-${id}" class="primary">Compute</button>${spec.examples.map(([name], i) => `<button data-example="${i}">${name}</button>`).join('')}</div><p id="notice-${id}" class="notice" role="status" aria-live="polite"></p><div id="result-${id}" class="result" role="status" aria-live="polite"></div>`;
+  acts.append(section);
+  stateInit();
+  // Wire input changes and examples to recomputation of their exact integer tuple.
+  function stateInit() {
+    states[index].signature = signature(section);
+    section
+      .querySelectorAll('input')
+      .forEach((x) => x.addEventListener('input', () => retire(index)));
+    section.querySelector('select')?.addEventListener('change', () => {
+      section
+        .querySelectorAll<HTMLElement>('.third-input')
+        .forEach(
+          (x) => (x.hidden = section.querySelector<HTMLSelectElement>('select')!.value === '2'),
+        );
+      retire(index);
+    });
+    section.querySelector(`#compute-${id}`)!.addEventListener('click', () => run(index));
+    section.querySelectorAll<HTMLButtonElement>('[data-example]').forEach(
+      (b) =>
+        (b.onclick = () => {
+          const values = spec.examples[Number(b.dataset.example)][1];
+          section.querySelectorAll<HTMLInputElement>('input').forEach((x, i) => {
+            if (values[i] !== undefined) x.value = values[i];
+          });
+          if (index === 5) {
+            section.querySelector<HTMLSelectElement>('select')!.value = String(values.length / 2);
+            section
+              .querySelectorAll<HTMLElement>('.third-input')
+              .forEach((x) => (x.hidden = values.length === 4));
+          }
+          retire(index);
+          run(index);
+        }),
+    );
+  }
+});
+steps.addEventListener('keydown', (e) => {
+  if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+  e.preventDefault();
+  activate(
+    e.key === 'Home' ? 0 : e.key === 'End' ? 5 : (selected + (e.key === 'ArrowRight' ? 1 : 5)) % 6,
+  );
+  (steps.children[selected] as HTMLElement).focus();
+});
+activate(0);
