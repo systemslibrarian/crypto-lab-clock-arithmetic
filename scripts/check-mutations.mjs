@@ -1,13 +1,37 @@
 // Each mutation starts from committed source, builds, fails its named assertion,
 // and restores the exact artifact and a green owning test before the next case.
-import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
-const config = process.env.PLAYWRIGHT_CONFIG;
+const config = resolve(root, process.env.PLAYWRIGHT_CONFIG ?? 'playwright.config.ts');
+// Serve the exact artifact just hashed: the regular config also builds, which
+// would replace the artifact between measurement and the assertion. Preserve
+// all browser/test options and forbid reuse of a server from another checkout.
+const configDir = mkdtempSync(join(tmpdir(), 'clock-arithmetic-mutations-'));
+const testConfig = join(configDir, 'playwright.config.ts');
+writeFileSync(
+  testConfig,
+  `
+import { defineConfig } from ${JSON.stringify(join(root, 'node_modules/@playwright/test/index.mjs'))};
+import base from ${JSON.stringify(config)};
+export default defineConfig({
+  ...base,
+  testDir: ${JSON.stringify(join(root, 'e2e'))},
+  webServer: {
+    ...base.webServer,
+    cwd: ${JSON.stringify(root)},
+    command: 'npm run preview -- --port 4747 --strictPort',
+    reuseExistingServer: false,
+  },
+});
+`,
+);
+process.on('exit', () => rmSync(configDir, { recursive: true, force: true }));
 const run = ([cmd, args]) =>
   spawnSync(cmd, args, {
     cwd: root,
@@ -33,7 +57,8 @@ const browser = (title) => [
     '--workers=1',
     '--retries=0',
     '--reporter=json',
-    ...(config ? ['--config', config] : []),
+    '--config',
+    testConfig,
   ],
 ];
 const hash = () => {
@@ -299,6 +324,7 @@ const green = (command, slug, phase) => {
 };
 mkdirSync('mutation-logs', { recursive: true });
 pass(build, 'baseline build');
+const sourceSha = pass(['git', ['rev-parse', 'HEAD']], 'source sha').stdout.trim();
 const baseline = hash(),
   evidence = [];
 for (const c of cases) {
@@ -331,6 +357,7 @@ for (const c of cases) {
     if (hash() !== mutant) throw Error(`${c.name}: browser did not retain the mutant build`);
     record = {
       name: c.name,
+      sourceSha,
       patches: c.patches,
       namedTest: unmutated.title,
       baselineGreen: true,
