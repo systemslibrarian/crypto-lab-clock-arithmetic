@@ -14,6 +14,8 @@ const config = resolve(root, process.env.PLAYWRIGHT_CONFIG ?? 'playwright.config
 // all browser/test options and forbid reuse of a server from another checkout.
 const configDir = mkdtempSync(join(tmpdir(), 'clock-arithmetic-mutations-'));
 const testConfig = join(configDir, 'playwright.config.ts');
+let artifact,
+  buildNumber = 0;
 writeFileSync(
   testConfig,
   `
@@ -25,7 +27,7 @@ export default defineConfig({
   webServer: {
     ...base.webServer,
     cwd: ${JSON.stringify(root)},
-    command: 'npm run preview -- --port 4747 --strictPort',
+    command: 'npm run preview -- --port 4747 --strictPort --outDir ' + JSON.stringify(process.env.CLOCK_MUTATION_DIST),
     reuseExistingServer: false,
   },
 });
@@ -37,14 +39,19 @@ const run = ([cmd, args]) =>
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
-    env: { ...process.env, CI: '1' },
+    env: { ...process.env, CI: '1', CLOCK_MUTATION_DIST: artifact },
   });
 const pass = (command, label) => {
   const r = run(command);
   if (r.status !== 0) throw Error(`${label}\n${r.stdout}\n${r.stderr}`);
   return r;
 };
-const build = ['npm', ['run', 'build']];
+// A fresh directory per build prevents any prior preview's assets from mixing
+// with this artifact. Hash relative paths so exact restoration remains testable.
+const build = (label) => {
+  artifact = join(configDir, `artifact-${buildNumber++}`);
+  pass(['npm', ['run', 'build', '--', '--outDir', artifact]], label);
+};
 const browser = (title) => [
   'npx',
   [
@@ -70,12 +77,12 @@ const hash = () => {
       const path = join(dir, e.name);
       if (e.isDirectory()) walk(path);
       else {
-        h.update(path);
+        h.update(path.slice(artifact.length + 1));
         h.update(readFileSync(path));
       }
     }
   };
-  walk('dist');
+  walk(artifact);
   return h.digest('hex');
 };
 const patch = (file, anchor, replacement) => ({ file, anchor, replacement });
@@ -323,7 +330,7 @@ const green = (command, slug, phase) => {
   return data;
 };
 mkdirSync('mutation-logs', { recursive: true });
-pass(build, 'baseline build');
+build('baseline build');
 const sourceSha = pass(['git', ['rev-parse', 'HEAD']], 'source sha').stdout.trim();
 const baseline = hash(),
   evidence = [];
@@ -343,7 +350,7 @@ for (const c of cases) {
     }
     const diff = pass(['git', ['diff', '--', ...originals.keys()]], 'read mutation diff').stdout;
     if (!diff.trim()) throw Error(`${c.name}: empty diff`);
-    pass(build, `${c.name}: mutant must compile`);
+    build(`${c.name}: mutant must compile`);
     const mutant = hash();
     if (mutant === baseline) throw Error(`${c.name}: bundle hash did not move`);
     const red = testResult(command, slug, 'mutant');
@@ -373,7 +380,7 @@ for (const c of cases) {
     };
   } finally {
     for (const [file, original] of originals) writeFileSync(file, original);
-    pass(build, `${c.name}: restore build`);
+    build(`${c.name}: restore build`);
     if (hash() !== baseline) throw Error(`${c.name}: restored hash differs`);
     green(command, slug, 'restored');
   }
