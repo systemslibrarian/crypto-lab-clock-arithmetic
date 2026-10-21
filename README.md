@@ -19,7 +19,7 @@ Use it to learn the arithmetic vocabulary before RSA, finite-field DH or discret
 
 ## Live Demo
 
-[Open Clock Arithmetic](https://systemslibrarian.github.io/crypto-lab-clock-arithmetic/). Change the inputs or load examples to inspect every computed row. Input changes cancel the Worker and retire dependent results; a no-op leaves them intact.
+[Open Clock Arithmetic](https://systemslibrarian.github.io/crypto-lab-clock-arithmetic/). Predict first, then click Compute or an example to inspect every computed row. Each reveal answers its own fixed prediction using the arithmetic modules. Input changes cancel the Worker and retire dependent results; a no-op leaves them intact.
 
 ## What Can Go Wrong
 
@@ -52,18 +52,26 @@ npm run dev
 ## Build & Verify
 
 ```bash
+npm ci
 npm test
 npm run build
 npx playwright install chromium
-npm run test:e2e
-npm run test:mutations
+npx playwright test --retries=0
+node scripts/check-mutations.mjs
 ```
 
-Ten unit cases in `src/nt/core.test.ts` include all unit inverses through n = 1000 against brute force and Euler, φ counts through n = 2000, generators for every prime below 500, and every residue pair for every pair of CRT moduli through 30 against brute search. Pinned values are mathematical facts, not external cryptographic test vectors. Browser claims independently check printed coefficients, unit counts, subgroup sizes, CRT substitutions and the negative fixture. All six acts and contrasting states are scanned at 1280px and 320px with axe, measured text and control contrast, focus, hidden-state and overflow checks. Twelve scripted mechanism mutations include all eleven requested defects and a broken fixture check; evidence records assertion kills, changed bundles and exact restoration.
+Ten unit cases in `src/nt/core.test.ts` include all unit inverses through n = 1000 against brute force and Euler, φ counts through n = 2000, generator and search-space/order comparisons for **every nonzero base at every prime below 500**, and every residue pair for every pair of CRT moduli through 30 against brute search. Pinned mathematical values are unchanged.
+
+The 27 browser claims independently recompute reductions, multiplication-row permutations, Bézout identities, inverse ranges, unit counts, power walks, every prime-factor generator check, subgroup members, DH search space and guess position, and CRT inverses/substitutions. The negative fixture asserts **all five** act-4 checks, including the two order routes. Cancellation is observed for at least five seconds, and longer if the measured uncancelled workload requires it. Both fail-closed input budgets have named tests.
+
+Two accessibility tests scan every act and example at 1280px and 320px, including arrival before computation, reveals, refusals and the composite counterexample. They retain axe, measured contrast, focus, hidden-state and overflow gates and the existing non-text baseline.
+
+The mutation runner requires committed source and records 28 concrete mutations, including a two-patch cancellation mutation. It breaks the negative fixture’s **Euler exponent**, not its verdict flag. Each case must pass its named baseline test, produce a non-empty source diff, compile and move the bundle hash, fail that same test by an assertion, then restore the exact bundle and pass again. It rejects missing/duplicate anchors, build failures, infrastructure errors, timeouts, empty selections and retries as kills. `mutation-evidence.json` records each five-step result; `mutation-logs/` holds the three test logs per case. `PLAYWRIGHT_CONFIG` can select a local browser configuration without changing the gates.
+
 
 ## Performance
 
-Heavy computations and HTML preparation run in a cancellable Worker; the page reports their measured elapsed time. Factorisation is exact trial division through 10¹², counting through 10⁶, prime-group enumeration through 10⁴, and displayed wrap/walk experiments through modulus 10⁴. Inputs above the declared budget are refused. BigInt arithmetic stays exact above 2⁵³. Large unit lists are paginated, and wide data regions are keyboard-scrollable.
+Heavy computations and HTML preparation run in a cancellable Worker; the page reports their measured elapsed time. Factorisation is exact trial division through 10¹², counting through 10⁶, prime-group enumeration through 10⁴, and displayed wrap/walk experiments through modulus 10⁴. Inputs above the declared budget are refused. BigInt arithmetic stays exact above 2⁵³. Large unit lists are paginated, and wide data regions are keyboard-scrollable. Subgroup construction reuses one primitive root across every divisor instead of enumerating all generators again for each subgroup.
 
 ---
 
