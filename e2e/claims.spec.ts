@@ -24,6 +24,7 @@ async function act(page: Page, n: number) {
   await ready(page, n);
 }
 async function compute(page: Page, n: number, values: Record<string, string>) {
+  await page.locator('#tab-' + n).click();
   for (const [key, value] of Object.entries(values))
     await page.locator(`#a${n}-${key}`).fill(value);
   await page.locator('#compute-' + n).click();
