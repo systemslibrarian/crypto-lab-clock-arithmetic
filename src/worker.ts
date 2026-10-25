@@ -4,11 +4,12 @@ import { act3 } from './ui/act3';
 import { act4 } from './ui/act4';
 import { act5 } from './ui/act5';
 import { act6 } from './ui/act6';
+import { act7 } from './ui/act7';
 // Evaluate the selected arithmetic exhibit with BigInt inputs and return only its current result.
 self.onmessage = (e: MessageEvent<{ act: number; values: bigint[] }>) => {
   const start = performance.now();
   try {
-    const html = [act1, act2, act3, act4, act5, act6][e.data.act - 1](e.data.values);
+    const html = [act1, act2, act3, act4, act5, act6, act7][e.data.act - 1](e.data.values);
     self.postMessage({ ok: true, html, ms: performance.now() - start });
   } catch (e) {
     self.postMessage({ ok: false, error: (e as Error).message });

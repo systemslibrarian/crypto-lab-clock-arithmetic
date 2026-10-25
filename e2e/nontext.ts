@@ -370,7 +370,7 @@ export async function auditNonText(page: Page, within = 'body *'): Promise<NonTe
     /**
      * Style and geometry are memoised per element for one pass.
      *
-     * A driven pass here walks six tabpanels, and the expensive part is the
+     * A driven pass here walks seven tabpanels, and the expensive part is the
      * BIP-340 vectors panel: nineteen `.kat-item` disclosures, each with a
      * summary pill and, once opened, five hex fields and a hand-off button —
      * all siblings re-walking the same ancestors up to `<body>`. Without the

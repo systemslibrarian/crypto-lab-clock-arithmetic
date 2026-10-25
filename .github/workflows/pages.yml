@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    timeout-minutes: 15
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,6 +31,17 @@ jobs:
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install chromium
+      - name: Concrete mutation gate
+        run: npm run test:mutations
+      - name: Preserve mutation evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: mutation-evidence-${{ github.sha }}
+          path: |
+            mutation-evidence.json
+            mutation-logs
+          if-no-files-found: error
       - name: E2E + accessibility gate (WCAG A/AA, axe-core)
         run: npm run test:e2e
       - uses: actions/upload-pages-artifact@v5

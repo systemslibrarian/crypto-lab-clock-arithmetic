@@ -1,5 +1,7 @@
 # Clock Arithmetic audit verification
 
+> **Historical record (2026-10-21):** this report predates L-R-01. Its contemporaneous 28-case JSON remains in Git history at `f521a6646ed5bb24022765d921e792de3af67487`. Current mutation runs generate an untracked JSON file for the immutable hosted artifact, preventing stale evidence from being mistaken for final-SHA proof.
+
 Audit completed on 2026-10-21, on branch `fix/clock-arithmetic-audit`.
 
 Published source SHA: `d02f885786fd762ccc36f133ef26e68ca322adb6`. This pins the code, tests and mutation runner. The following documentation/evidence commit does not change those files. No merge, deployment or catalog modification was performed.
@@ -84,7 +86,7 @@ Common baseline/restored artifact SHA-256:
 | text digit budget enlarged | green | 1 patch(es), non-empty | `edbb4203c2a4` | Refuses input over 2,000 digits | green, exact hash |
 | CRT dedupe compares wrong residue | green | 1 patch(es), non-empty | `84b8d6c5ffcd` | CRT deduplicates identical congruences with an informational note and solution | green, exact hash |
 
-**Total: 28 of 28 killed.** The committed JSON contains each exact anchor/replacement pair, non-empty diff, full hashes, assertion failure, source SHA and restored status. The three per-case browser logs are written locally under ignored `mutation-logs/` on every run.
+**Total: 28 of 28 killed.** The contemporaneous JSON in evidence commit `f521a6646ed5bb24022765d921e792de3af67487` contains each exact anchor/replacement pair, non-empty diff, full hashes, assertion failure, source SHA and restored status. The three per-case browser logs were written locally under ignored `mutation-logs/` on every run.
 
 The completed catalog handoff is in `catalog-handoff.md`, including real implementation/call-site anchors, GitHub About/topics, provisional visual/category fields, and the read-only served-byte check of the still-existing deployment.
 

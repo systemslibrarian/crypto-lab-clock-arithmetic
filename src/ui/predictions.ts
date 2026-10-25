@@ -4,6 +4,12 @@ import { phiByFactor } from '../nt/phi';
 import { orderByWalk } from '../nt/order';
 import { searchSpace } from '../nt/toyDh';
 import { crt } from '../nt/crt';
+import {
+  createMontgomeryContext,
+  montMultTrace,
+  redcTrace,
+  toMontgomeryTrace,
+} from '../nt/montgomery';
 
 // Derive each fixed prediction from the same exact arithmetic primitives as the exhibits.
 export function predictionAnswer(act: number): string {
@@ -30,6 +36,14 @@ export function predictionAnswer(act: number): string {
       return result.kind === 'NoSolution'
         ? `No solution: gcd ${result.g} does not divide ${result.delta}. The remainders have incompatible parity.`
         : `x = ${result.x} modulo ${result.modulus}.`;
+    }
+    case 7: {
+      const context = createMontgomeryContext(17n, 32n);
+      const aBar = toMontgomeryTrace(3n, context).result;
+      const bBar = toMontgomeryTrace(5n, context).result;
+      const product = montMultTrace(aBar, bBar, 17n, context.nPrime, 32n);
+      const decoded = redcTrace(product.result, 17n, context.nPrime, 32n).result;
+      return `R = 32; ā = ${aBar}; b̄ = ${bBar}; m = ${product.m}; the encoded product is ${product.result}; one final REDC decodes ${decoded}.`;
     }
     default:
       throw Error('Unknown prediction.');

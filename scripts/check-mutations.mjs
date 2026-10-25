@@ -291,6 +291,76 @@ const cases = [
     'x.n === c.n && x.a === a + 1n',
     'CRT deduplicates',
   ),
+  single(
+    'Montgomery nPrime sign flipped',
+    'src/nt/montgomery.ts',
+    'return mod(-setupInverse(N, R), R);',
+    'return mod(setupInverse(N, R), R);',
+    'Montgomery default trace independently checks cancellation',
+  ),
+  single(
+    'Montgomery cancellation adds with the wrong sign',
+    'src/nt/montgomery.ts',
+    'const sum = T + mTimesN;',
+    'const sum = T - mTimesN;',
+    'Montgomery default trace independently checks cancellation',
+  ),
+  single(
+    'Montgomery radix shift is one bit short',
+    'src/nt/montgomery.ts',
+    'const candidate = sum >> powerOfTwoExponent(R);',
+    'const candidate = sum >> (powerOfTwoExponent(R) - 1n);',
+    'Montgomery default trace independently checks cancellation',
+  ),
+  single(
+    'Montgomery REDC skips final subtraction',
+    'src/nt/montgomery.ts',
+    'const result = subtracted ? candidate - N : candidate;',
+    'const result = candidate;',
+    'Montgomery critical regression exposes raw candidate',
+  ),
+  single(
+    'Montgomery encoding omits R squared',
+    'src/nt/montgomery.ts',
+    'const input = normalized * context.rSquared;',
+    'const input = normalized;',
+    'Montgomery default trace independently checks cancellation',
+  ),
+  single(
+    'Montgomery chain squares the wrong value',
+    'src/ui/act7.ts',
+    'const square = montMultTrace(product.result, product.result, N, context.nPrime, R);',
+    'const square = montMultTrace(product.result, aEncoding.result, N, context.nPrime, R);',
+    'Montgomery chain retains product and square',
+  ),
+  single(
+    'Montgomery fixed work replaces squares with products',
+    'src/nt/montgomery.ts',
+    ': montMult(state, state, context.N, context.nPrime, context.R);',
+    ': montMult(state, bBar, context.N, context.nPrime, context.R);',
+    'Montgomery fixed work separates setup',
+  ),
+  single(
+    'Montgomery negative remainder is not canonicalized',
+    'src/ui/act7.ts',
+    'return ((value % modulus) + modulus) % modulus;',
+    'return value % modulus;',
+    'Montgomery negative input uses a canonical residue',
+  ),
+  single(
+    'Montgomery fixed work count is halved',
+    'src/ui/act7.ts',
+    'const FIXED_WORK_ROUNDS = 4096n;',
+    'const FIXED_WORK_ROUNDS = 2048n;',
+    'Montgomery fixed work separates setup',
+  ),
+  single(
+    'Montgomery measurement overclaims benchmark evidence',
+    'src/ui/act7.ts',
+    'They are not a benchmark, a speedup claim, or evidence of constant-time behavior.',
+    'They prove this method is faster and constant-time.',
+    'Montgomery fixed work separates setup',
+  ),
 ];
 const files = [...new Set(cases.flatMap((c) => c.patches.map((p) => p.file)))];
 if (run(['git', ['diff', 'HEAD', '--exit-code', '--', ...files]]).status !== 0)
@@ -300,6 +370,26 @@ for (const c of cases)
   for (const p of c.patches)
     if (readFileSync(p.file, 'utf8').split(p.anchor).length !== 2)
       throw Error(`${c.name}: expected exactly one anchor in ${p.file}: ${p.anchor}`);
+// Every owner must select exactly one test before any browser or mutation work starts.
+for (const c of cases) {
+  const listed = run([
+    'npx',
+    [
+      'playwright',
+      'test',
+      'e2e/claims.spec.ts',
+      '--project=chromium',
+      '--grep',
+      c.owner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      '--list',
+      '--config',
+      testConfig,
+    ],
+  ]);
+  const selected = listed.stdout.split('\n').filter((line) => line.includes('[chromium] ›')).length;
+  if (listed.status !== 0 || selected !== 1)
+    throw Error(`${c.name}: owner preflight selected ${selected} tests, expected exactly one`);
+}
 
 const testResult = (command, slug, phase) => {
   const r = run(command);

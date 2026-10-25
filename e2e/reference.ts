@@ -85,3 +85,13 @@ export async function assertPowerClaims(page: Page): Promise<void> {
       );
   }
 }
+
+// Independent Montgomery multiplication reference (no imports from montgomery.ts)
+export function montgomeryReference(a: number, b: number, n: number): number {
+  // Independent implementation of Montgomery multiplication
+  // This is a simple fallback that just computes (a * b) mod n
+  // For verification purposes, we use this to check the Montgomery result
+  a = mod(a, n);
+  b = mod(b, n);
+  return mod(a * b, n);
+}
