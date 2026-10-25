@@ -136,6 +136,39 @@ const specs: Exhibit[] = [
       ['Compatible shared factor', ['1', '4', '3', '6']],
     ],
   },
+  {
+    title: 'Montgomery multiplication',
+    intro:
+      'Montgomery arithmetic represents x as xR mod N so repeated products can use mask, add, shift and optional-subtraction steps instead of remainder by N. This exhibit exposes the cancelling low word, the pre-subtraction REDC candidate, a product-and-square chain, one conversion out, and separately measured setup and fixed repeated work. The executed TypeScript BigInt timings are observations, not speed or constant-time claims.',
+    predict:
+      'With N = 17 and R = 32, what does REDC do to the encoded product of 3 and 5?',
+    fields: [
+      [
+        'a',
+        'First integer',
+        '3',
+        'Any integer; negative or oversized values are normalized before encoding.',
+      ],
+      [
+        'b',
+        'Second integer',
+        '5',
+        'Any integer; negative or oversized values are normalized before encoding.',
+      ],
+      ['n', 'Odd modulus N', '17', 'Must be odd and greater than 1, through 10¹².'],
+      ['r', 'Power-of-two radix R', '32', 'Must be a power of two and greater than N.'],
+    ],
+    examples: [
+      ['Use N=17, R=32', ['3', '5', '17', '32']],
+      ['Expose final subtraction', ['3', '3', '9', '16']],
+      ['Composite odd modulus', ['4', '7', '9', '16']],
+      ['Normalize a negative input', ['-3', '5', '17', '32']],
+      ['Zero input', ['0', '5', '17', '32']],
+      ['Reject even N', ['3', '5', '10', '16']],
+      ['Reject R ≤ N', ['3', '5', '17', '16']],
+      ['Reject non-power-of-two R', ['3', '5', '17', '24']],
+    ],
+  },
 ];
 const acts = document.getElementById('acts')!,
   steps = document.getElementById('steps')!;
@@ -328,8 +361,13 @@ specs.forEach((spec, index) => {
 steps.addEventListener('keydown', (e) => {
   if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
   e.preventDefault();
+  const numActs = specs.length;
   activate(
-    e.key === 'Home' ? 0 : e.key === 'End' ? 5 : (selected + (e.key === 'ArrowRight' ? 1 : 5)) % 6,
+    e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? numActs - 1
+        : (selected + (e.key === 'ArrowRight' ? 1 : numActs - 1)) % numActs,
   );
   (steps.children[selected] as HTMLElement).focus();
 });

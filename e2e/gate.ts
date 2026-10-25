@@ -107,7 +107,7 @@ export async function assertListSemantics(page: Page): Promise<void> {
   ).toEqual([]);
 }
 
-// Structural arrival only: six controls, first panel visible, and no computation before a click.
+// Structural arrival only: seven controls, first panel visible, and no computation before a click.
 // Seed a conflicting saved preference to verify that this page still pins its dark theme.
 export async function boot(page: Page, theme: 'dark' | 'light' = 'dark'): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -118,7 +118,7 @@ export async function boot(page: Page, theme: 'dark' | 'light' = 'dark'): Promis
   );
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('h1')).toHaveCount(1);
-  await expect(page.getByRole('tab')).toHaveCount(6);
+  await expect(page.getByRole('tab')).toHaveCount(7);
   await expect(page.locator('#act-1')).toBeVisible();
   await expect(page.locator('#compute-1')).toBeVisible();
   await expect(page.locator('#result-1')).toBeEmpty();
@@ -127,7 +127,7 @@ export async function boot(page: Page, theme: 'dark' | 'light' = 'dark'): Promis
   await settle(page);
 }
 
-// Wide arithmetic tables scroll locally; the six-act layout must reflow at phone widths.
+// Wide arithmetic tables scroll locally; the seven-act layout must reflow at phone widths.
 export async function expectNoHorizontalOverflow(page: Page, label: string): Promise<void> {
   const overflow = await page.evaluate(() => {
     const doc = document.documentElement;

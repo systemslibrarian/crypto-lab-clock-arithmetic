@@ -2,14 +2,14 @@ import { test, expect } from '@playwright/test';
 import { boot, scan, watchPageErrors, expectBaselineNotStale, reportCollected } from './gate';
 import { assertPowerClaims } from './reference';
 for (const width of [1280, 320])
-  test(`All six acts and edge states at ${width}`, async ({ page }) => {
+  test(`All seven acts and edge states at ${width}`, async ({ page }) => {
     test.setTimeout(300000);
     await page.setViewportSize({ width, height: 900 });
     const errors = watchPageErrors(page);
     await boot(page, 'light');
     await page.locator('.cl-skip-link').focus();
     await scan(page, 'focused skip link');
-    for (let n = 1; n <= 6; n++) {
+    for (let n = 1; n <= 7; n++) {
       await page.locator('#tab-' + n).click();
       await expect(page.locator('#result-' + n)).toBeEmpty();
       await scan(page, `act ${n} prediction arrival`);
@@ -36,6 +36,11 @@ for (const width of [1280, 320])
     await page.locator('#compute-4').click();
     await expect(page.locator('#notice-4')).not.toContainText('Computing');
     await scan(page, 'refused modulus');
+    await page.locator('#tab-7').click();
+    await page.locator('#a7-n').fill('10');
+    await page.locator('#compute-7').click();
+    await expect(page.locator('#result-7')).toContainText('must be odd');
+    await scan(page, 'Montgomery rejects even modulus');
     await page.locator('main > details summary').click();
     await scan(page, 'scope links');
     expectBaselineNotStale();

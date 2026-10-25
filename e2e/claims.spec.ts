@@ -11,6 +11,7 @@ import {
   powersFromZero,
   checksPass,
   assertPowerClaims,
+  montgomeryReference,
 } from './reference';
 
 async function ready(page: Page, n: number) {
@@ -39,8 +40,9 @@ test('Arrival preserves every prediction until the learner computes or reveals',
     `2’s walk cycles ${walk(2, 10).values.join(' → ')} and never reaches 1`,
     `|⟨22⟩| = ${powersFromZero(22, 23).length}`,
     `No solution: gcd ${gcd(4, 6)} does not divide ${2 - 1}`,
+    `R = 32; ā = 11; b̄ = 7; m = 3; the encoded product is 4; one final REDC decodes ${montgomeryReference(3, 5, 17)}.`,
   ];
-  for (let n = 1; n <= 6; n++) {
+  for (let n = 1; n <= 7; n++) {
     await page.locator('#tab-' + n).click();
     await expect(page.locator('#result-' + n)).toBeEmpty();
     await expect(page.locator('#notice-' + n)).toBeEmpty();
@@ -51,8 +53,8 @@ test('Arrival preserves every prediction until the learner computes or reveals',
     await expect(disclosure.locator('p')).toContainText(answers[n - 1]);
     await expect(page.locator('#result-' + n)).toBeEmpty();
   }
-  await page.locator('#compute-6').click();
-  await ready(page, 6);
+  await page.locator('#compute-7').click();
+  await ready(page, 7);
   await page.locator('#tab-3').click();
   await page.getByRole('button', { name: 'Use 36', exact: true }).click();
   await ready(page, 3);
@@ -531,3 +533,135 @@ test('Hidden probe and keyboard stepper', async ({ page }) => {
   await page.locator('.step-euclid').click();
   await expect(page.locator('.euclid-steps [data-step]:visible')).toHaveCount(2);
 });
+
+test('Montgomery default trace independently checks cancellation and canonical product', async ({
+  page,
+}) => {
+  await boot(page);
+  await act(page, 7);
+  const region = page.locator('#result-7');
+  await checksPass(region, 6);
+  await expect(region.locator('#n-prime')).toHaveText('15');
+  await expect(region.locator('#r-squared-mod-n')).toHaveText('4');
+  await expect(region.locator('#a-bar')).toHaveText('11');
+  await expect(region.locator('#b-bar')).toHaveText('7');
+  await expect(region.locator('#mont-t')).toHaveText('77');
+  await expect(region.locator('#mont-low')).toHaveText('13');
+  await expect(region.locator('#mont-m')).toHaveText('3');
+  await expect(region.locator('#mont-m-times-n')).toHaveText('51');
+  await expect(region.locator('#mont-cancelled-low')).toHaveText('0');
+  await expect(region.locator('#mont-candidate')).toHaveText('4');
+  await expect(region.locator('#mont-final-subtraction')).toContainText('4 < 17');
+  await expect(region.locator('#mont-product-bar')).toHaveText('4');
+  await expect(region.locator('#result')).toHaveText('15');
+  await expect(region.locator('#direct')).toHaveText('15');
+});
+
+test('Montgomery critical regression exposes raw candidate and final subtraction', async ({
+  page,
+}) => {
+  await boot(page);
+  await compute(page, 7, { a: '3', b: '3', n: '9', r: '16' });
+  await ready(page, 7);
+  const region = page.locator('#result-7');
+  await checksPass(region, 6);
+  await expect(region.locator('#mont-t')).toHaveText('9');
+  await expect(region.locator('#mont-m')).toHaveText('15');
+  await expect(region.locator('#mont-m-times-n')).toHaveText('135');
+  await expect(region.locator('#mont-candidate')).toHaveText('9');
+  await expect(region.locator('#mont-final-subtraction')).toContainText('9 ≥ 9');
+  await expect(region.locator('#mont-final-subtraction')).toContainText('9 − 9 = 0');
+  await expect(region.locator('#mont-product-bar')).toHaveText('0');
+  await expect(region.locator('#result')).toHaveText('0');
+});
+
+test('Montgomery chain retains product and square until one conversion out', async ({ page }) => {
+  await boot(page);
+  await act(page, 7);
+  const region = page.locator('#result-7');
+  expect(await region.locator('.montgomery-chain tbody tr').allTextContents()).toEqual([
+    'ā · b̄774no4',
+    '(ā · b̄)²169no9',
+    '(ā · b̄)² · ā9910no10',
+  ]);
+  await expect(region.locator('#chain-result')).toHaveText('12');
+  await expect(region.locator('#chain-direct')).toHaveText('12');
+  await expect(region.locator('[data-check="montgomery-chain"]')).toHaveAttribute(
+    'data-verdict',
+    'pass',
+  );
+});
+
+test('Montgomery fixed work separates setup repeated loops and decode', async ({ page }) => {
+  await boot(page);
+  await act(page, 7);
+  const region = page.locator('#result-7');
+  await expect(region.locator('#fixed-rounds')).toHaveText('4096');
+  const rows = await region.locator('.montgomery-measurements tbody tr').allTextContents();
+  expect(rows).toHaveLength(4);
+  expect(rows[0]).toContain('Montgomery setup');
+  expect(rows[0]).toContain('validate supplied R');
+  expect(rows[1]).toContain('Ordinary repeated loop');
+  expect(rows[1]).toContain('canonical a and b from setup');
+  expect(rows[2]).toContain('Montgomery repeated loop');
+  expect(rows[2]).toContain('optional-subtraction');
+  expect(rows[2]).toContain('setup and decode excluded');
+  expect(rows[3]).toContain('final Montgomery decode');
+  for (const id of ['setup-ms', 'ordinary-loop-ms', 'montgomery-loop-ms', 'decode-ms']) {
+    const value = Number(await region.locator(`#${id}`).textContent());
+    expect(Number.isFinite(value) && value >= 0).toBe(true);
+  }
+  await expect(region.locator('[data-check="montgomery-fixed-work"]')).toHaveAttribute(
+    'data-verdict',
+    'pass',
+  );
+  await expect(region.locator('#montgomery-measurement-limit')).toContainText(
+    'not a benchmark, a speedup claim, or evidence of constant-time behavior',
+  );
+});
+
+test('Montgomery negative input uses a canonical residue and every check passes', async ({
+  page,
+}) => {
+  await boot(page);
+  await compute(page, 7, { a: '-3', b: '5', n: '17', r: '32' });
+  await ready(page, 7);
+  const region = page.locator('#result-7');
+  await checksPass(region, 6);
+  await expect(region.locator('#a-normalized')).toHaveText('14');
+  await expect(region.locator('#direct')).toHaveText('2');
+  await expect(region.locator('#result')).toHaveText('2');
+});
+
+test('Montgomery composite and zero inputs retain canonical results', async ({ page }) => {
+  await boot(page);
+  await compute(page, 7, { a: '4', b: '7', n: '9', r: '16' });
+  await ready(page, 7);
+  await checksPass(page.locator('#result-7'), 6);
+  await expect(page.locator('#result-7 #result')).toHaveText('1');
+  await compute(page, 7, { a: '0', b: '5', n: '17', r: '32' });
+  await ready(page, 7);
+  await checksPass(page.locator('#result-7'), 6);
+  await expect(page.locator('#result-7 #result')).toHaveText('0');
+});
+
+for (const [name, values, message] of [
+  ['even modulus', { n: '10', r: '16' }, 'must be odd'],
+  ['unit modulus', { n: '1', r: '2' }, 'greater than 1'],
+  [
+    'modulus above budget',
+    { n: '1000000000001', r: '1099511627776' },
+    'at most 1000000000000',
+  ],
+  ['radix not greater than modulus', { n: '17', r: '16' }, 'greater than N'],
+  ['non-power-of-two radix', { n: '17', r: '24' }, 'power of two'],
+] as const)
+  test(`Montgomery rejects ${name}`, async ({ page }) => {
+    await boot(page);
+    await compute(page, 7, values);
+    await ready(page, 7);
+    const region = page.locator('#result-7');
+    await expect(region.locator('#montgomery-refusal')).toHaveAttribute('data-verdict', 'info');
+    await expect(region).toContainText(message);
+    await expect(region.locator('[data-check]')).toHaveCount(0);
+  });

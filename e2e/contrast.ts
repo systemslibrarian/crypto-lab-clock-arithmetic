@@ -414,7 +414,7 @@ export async function auditContrast(
     /**
      * Style and geometry are memoised per element for one pass.
      *
-     * A driven pass here walks a six-panel document, and the expensive part is
+     * A driven pass here walks a seven-panel document, and the expensive part is
      * the BIP-340 vectors panel: nineteen `.kat-item` disclosures, each
      * holding five `.field` label/value pairs of 64-byte hex, plus the
      * three-step trace and both-sides comparison the Sign panel renders on
@@ -691,7 +691,7 @@ export async function auditContrast(
      *
      * Whether it is a no-op here depends on declarations that are easy to
      * change and easy to miss, which is the argument for keeping it: this page
-     * runs six exhibits and many screens deep, so the day a `height: 100%`
+     * runs seven exhibits and many screens deep, so the day a `height: 100%`
      * appears on `html` or `body`, everything below the first screen would
      * report against a white page that does not exist — in a lab whose default
      * dark canvas is near-black.
