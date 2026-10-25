@@ -119,6 +119,12 @@ export async function boot(page: Page, theme: 'dark' | 'light' = 'dark'): Promis
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.getByRole('tab')).toHaveCount(7);
+  // A core-arithmetic exception while a later panel's prediction is derived can
+  // otherwise leave a partial page whose early controls look healthy. Assert
+  // that every compute control was constructed before any test tries to click
+  // one, so a broken arrival is a fast, named assertion rather than a locator
+  // timeout.
+  await expect(page.locator('[id^="compute-"]')).toHaveCount(7);
   await expect(page.locator('#act-1')).toBeVisible();
   await expect(page.locator('#compute-1')).toBeVisible();
   await expect(page.locator('#result-1')).toBeEmpty();
