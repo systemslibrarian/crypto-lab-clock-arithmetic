@@ -179,16 +179,15 @@ const states = specs.map(() => ({
   signature: '',
 }));
 let selected = 0;
-// Canonicalize integer inputs so equivalent values do not retire an unchanged computation.
+// Use the same decimal grammar and size limit for computing and comparing inputs.
+function isIntegerText(value: string) {
+  return value.length <= 2000 && /^-?\d+$/.test(value);
+}
 function signature(section: HTMLElement) {
   return (
     Array.from(section.querySelectorAll<HTMLInputElement>('input'))
       .map((x) => {
-        try {
-          return BigInt(x.value).toString();
-        } catch {
-          return x.value;
-        }
+        return isIntegerText(x.value) ? BigInt(x.value).toString() : `invalid:${x.value}`;
       })
       .join('|') +
     '|' +
@@ -272,9 +271,9 @@ function run(index: number) {
     if (index === 5 && section.querySelector<HTMLSelectElement>('select')!.value === '2')
       fields = fields.slice(0, 4);
     const values = fields.map((x) => {
-      if (!/^-?\d+$/.test(x.value))
-        throw Error('Enter a whole integer using digits, with an optional leading minus sign.');
       if (x.value.length > 2000) throw Error('Input exceeds the 2,000-digit text budget.');
+      if (!isIntegerText(x.value))
+        throw Error('Enter a whole integer using digits, with an optional leading minus sign.');
       return BigInt(x.value);
     });
     notice.textContent = 'Computing exact arithmetic…';

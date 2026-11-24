@@ -666,3 +666,17 @@ for (const [name, values, message] of [
     await expect(region).toContainText(message);
     await expect(region.locator('[data-check]')).toHaveCount(0);
   });
+
+test('invalid spellings retire earlier decimal results, including zero', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('#tab-1').click();
+  const input = page.locator('#act-1 input').first();
+  for (const [valid, invalid] of [['0', ''], ['16', '0x10'], ['1', '+1']]) {
+    await input.fill(valid);
+    await page.locator('#compute-1').click();
+    await ready(page, 1);
+    await input.fill(invalid);
+    await expect(page.locator('#result-1')).toBeEmpty();
+    await expect(page.locator('#notice-1')).toContainText('retired');
+  }
+});
