@@ -407,7 +407,9 @@ for (const [name, a, n] of [
     await expect(page.locator('#result-2')).not.toContainText('Use this inverse');
   });
 for (const [name, n, msg] of [
-  ['n below2', '1', 'nothing wraps'],
+  ['unit modulus', '1', 'nothing wraps'],
+  ['zero modulus', '0', 'Modulus 0 is outside this lab’s range'],
+  ['negative modulus', '-7', 'Modulus -7 is outside this lab’s range'],
   ['phi out of budget', '1000000000001', 'budget'],
   ['invalid input text', 'abc', 'whole integer'],
   ['input over 2,000 digits', '9'.repeat(2001), '2,000-digit text budget'],
@@ -533,6 +535,15 @@ test('Hidden probe and keyboard stepper', async ({ page }) => {
   await expect(page.locator('.euclid-steps [data-step]:visible')).toHaveCount(1);
   await page.locator('.step-euclid').click();
   await expect(page.locator('.euclid-steps [data-step]:visible')).toHaveCount(2);
+  await compute(page, 2, { a: '12', n: '6' });
+  await ready(page, 2);
+  await expect(page.locator('.euclid-steps [data-step]')).toHaveCount(1);
+  await expect(page.locator('.step-euclid')).toBeDisabled();
+  await compute(page, 2, { a: '15', n: '6' });
+  await ready(page, 2);
+  await page.locator('.step-euclid').click();
+  await expect(page.locator('.euclid-steps [data-step]:visible')).toHaveCount(2);
+  await expect(page.locator('.step-euclid')).toBeDisabled();
 });
 
 test('Montgomery default trace independently checks cancellation and canonical product', async ({

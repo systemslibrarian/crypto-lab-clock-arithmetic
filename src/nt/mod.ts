@@ -1,6 +1,7 @@
 // Require 2 ≤ n ≤ the declared exact-arithmetic budget.
 export function modulus(n: bigint, max = 1000000000000n): void {
-  if (n < 2n) throw Error('ℤ₁ has one element; nothing wraps. Use n ≥ 2.');
+  if (n === 1n) throw Error('ℤ₁ has one element; nothing wraps. Use n ≥ 2.');
+  if (n < 1n) throw Error(`Modulus ${n} is outside this lab’s range. Use n ≥ 2.`);
   if (n > max) throw Error(`Input exceeds this experiment’s exact budget of ${max}.`);
 }
 // Return the unique residue congruent to a in [0, n).

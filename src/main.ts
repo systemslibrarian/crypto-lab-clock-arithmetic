@@ -221,12 +221,14 @@ function retire(index: number) {
 function controlsAfter(index: number) {
   const region = document.getElementById(`result-${index + 1}`)!;
   const step = region.querySelector<HTMLButtonElement>('.step-euclid');
-  if (step)
+  if (step) {
+    step.disabled = !region.querySelector('.euclid-steps [hidden]');
     step.onclick = () => {
-      const row = region.querySelector<HTMLElement>('[data-step][hidden]');
+      const row = region.querySelector<HTMLElement>('.euclid-steps [hidden]');
       if (row) row.hidden = false;
-      if (!region.querySelector('[data-step][hidden]')) step.disabled = true;
+      step.disabled = !region.querySelector('.euclid-steps [hidden]');
     };
+  }
   region
     .querySelector<HTMLButtonElement>('.jump-act2')
     ?.addEventListener('click', () => activate(1));
