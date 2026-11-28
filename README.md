@@ -10,7 +10,7 @@ Exact, inspectable BigInt number theory underneath RSA and finite-field Diffie�
 2. **Undo multiplication:** step Euclid, check every Bézout row, derive a normalized inverse, and recognize shared-factor failures.
 3. **Count units:** compare enumeration with the prime-factor formula. Unit lists paginate in groups of 200; the exact count includes all units.
 4. **Watch powers cycle:** compare a walk with divisor-based order computation, check Euler/Fermat/Lagrange, and observe that Euler can hold for a cycle of length two.
-5. **Generators and subgroups:** inspect every element’s order and every prime-factor generator check. A toy DH separates the possible-secret count from the number of guesses actually used.
+5. **Generators and subgroups:** inspect every element’s order and every prime-factor generator check. A toy DH separates the possible-secret count from the number of guesses actually used. These measurements concern the selected base. Deployed finite-field DH also requires vetted group parameters and the protocol’s checks on received peer public values. [RFC 7919 §5.1](https://www.rfc-editor.org/rfc/rfc7919.html#section-5.1).
 6. **Recombine remainders:** step generalized CRT, reject incompatible congruences, deduplicate repeats, and use the lcm for compatible noncoprime moduli.
 7. **Montgomery multiplication:** choose an explicit power-of-two radix, encode through REDC, inspect low-word cancellation, radix shifting and final subtraction, keep a product-and-square chain encoded, then decode once. A fixed 4,096-operation comparison measures setup, ordinary repeated work, Montgomery repeated work and final decoding separately.
 
